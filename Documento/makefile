@@ -1,0 +1,12 @@
+CC=pdflatex
+SUFFIX=.tex
+FLAGS=
+PROGRAM_NAME=Apresentacao
+OUTPUT_NAME=$(PROGRAM_NAME).pdf
+
+
+$(OUTPUT_NAME):$(PROGRAM_NAME).tex
+	$(CC) $(PROGRAM_NAME).tex
+
+run:$(OUTPUT_NAME)
+	evince $(OUTPUT_NAME) &
