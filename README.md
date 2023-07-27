@@ -1,9 +1,19 @@
-# Projeto-Final-Lia
+# Projeto Final LIA
 
-### Features:
-- Input com Reconhecimento de Voz
+### Proposta:
+    Criar um ambiente que ajude no aprendizado de uma língua estrangeira.
+Será criado, no formato de um jogo, uma loja, a qual vende dos mais variados
+produtos, desde eletrônicos a alimentos, e a sua interação com a loja, poderá
+ser por meio da fala, podendo ser desabilitado, além da interação vendedor 
+jogador também poder ser por áudio. 
+    Dessa forma, será possível para o Jogador treinar a pronúncia, a escuta e
+ter contato com diferentes palavras da língua.
+
+
+### Conteúdos:
+- Entrada com Reconhecimento de Voz
 - Interface Visual com o Pygame
-- Output da loja com pyaudio
+- Saída de áudio da loja com Pyaudio
 - Polimento do Modelo com Classificador
 
 ### Estrutura do Documento
