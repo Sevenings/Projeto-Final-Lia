@@ -5,8 +5,9 @@
 Será criado, no formato de um jogo, uma loja, a qual vende dos mais variados
 produtos, desde eletrônicos a alimentos, e a sua interação com a loja, poderá
 ser por meio da fala, podendo ser desabilitado, além da interação vendedor 
-jogador também poder ser por áudio. 
-    Dessa forma, será possível para o Jogador treinar a pronúncia, a escuta e
+jogador também poder ser por áudio.
+
+Dessa forma, será possível para o Jogador treinar a pronúncia, a escuta e
 ter contato com diferentes palavras da língua.
 
 
