@@ -1,7 +1,8 @@
 # Projeto Final LIA
 
 ### Proposta:
-    Criar um ambiente que ajude no aprendizado de uma língua estrangeira.
+```Criar um ambiente que ajude no aprendizado de uma língua estrangeira.```
+
 Será criado, no formato de um jogo, uma loja, a qual vende dos mais variados
 produtos, desde eletrônicos a alimentos, e a sua interação com a loja, poderá
 ser por meio da fala, podendo ser desabilitado, além da interação vendedor 
