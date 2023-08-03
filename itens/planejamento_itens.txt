@@ -1,0 +1,16 @@
+Dinheiro Inicial: 100
+
+Maçã        6/kg
+Banana      3/kg
+Mamão       5/kg
+Manga       5/kg
+Melancia    1/kg
+
+Carregador de Celular   25
+Fones de Ouvido         15
+Capa de Celular         10
+
+Camisa Verde, Azul e Amarela    55
+Calça Jeans                     60
+Shorts                          40
+Sapato                          45
