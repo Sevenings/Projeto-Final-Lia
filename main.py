@@ -2,10 +2,14 @@ import pygame
 from pygame.locals import *
 from pathlib import Path
 import json
+import threading
+from time import sleep
+from random import randint
 
 
 pygame.init()
 clock = pygame.time.Clock()
+FPS = 60
 
 
 class Screen:
@@ -33,13 +37,15 @@ class Screen:
         self.camera = camera
         camera.screen = self
 
-    def addObject(self, obj):
-        self.cena.append(obj)
-        obj.setScreen(self)
+    def addObject(self, *objs):
+        for o in objs:
+            self.cena.append(o)
+            o.setScreen(self)
+        return
 
-    def update(self):
+    def update(self, time):
         for obj in self.cena:
-            obj.update()
+            obj.update(time)
         self.draw()
 
     def draw(self):
@@ -62,6 +68,14 @@ class Screen:
     def setBackground(self, background):
         self.background = background
         self.preCanvas = pygame.Surface(self.background.size())
+
+    def getBackground(self):
+        return self.background
+
+    def screenSetup(self):
+        for obj in self.cena:
+            obj.screenSetup()
+
 
 screen = Screen()
 
@@ -95,12 +109,15 @@ screen.appendCamera(camera)
 
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_name, pos):
-        images_path = 'assets'
-        self.image = pygame.image.load(f'{images_path}/{image_name}')
+        self.loadImagesSetup(image_name)
         self.pos = pos
         self.rect = self.image.get_rect()
         self.rect.topleft = self.pos
         self.screen = None
+
+    def loadImagesSetup(self, image_name):
+        images_path = 'assets'
+        self.image = pygame.image.load(f'{images_path}/{image_name}')
 
     def setPos(self, x, y):
         self.pos = (x, y)
@@ -130,6 +147,23 @@ class GameObject(pygame.sprite.Sprite):
     def draw(self):
         pass
 
+    def resizeImage(self, percent, ref_image):  
+        k = percent
+        Ko = ref_image.heigth()/self.image.get_size()[1]  # Baseado na Altura
+        self.image = pygame.transform.scale_by(self.image, k*Ko)
+
+    def resizeThisImage(self, input_image, percent, ref_image):
+        k = percent
+        Ko = ref_image.heigth()/input_image.get_size()[1]  # Baseado na Altura
+        output = pygame.transform.scale_by(input_image, k*Ko)
+        return output
+
+    def screenSetup(self):
+        pass
+
+    def update(self, time):
+        pass
+
 
 class Background(GameObject):
     def __init__(self):
@@ -138,9 +172,6 @@ class Background(GameObject):
 
     def draw(self):
         self.screen.blit(self.image, self.getPos())
-
-    def update(self):
-        pass
 
 
 background = Background()
@@ -171,7 +202,6 @@ def loadItens(path):
 
 
 
-venda_pos = (background.center()[0], background.size()[1]*0.98)
 class Barraca(GameObject):
     def __init__(self):
         super().__init__('shop.png', (0, 0))
@@ -183,10 +213,90 @@ class Barraca(GameObject):
         size = self.image.get_size()
         self.screen.blit(self.image, self.getPos())
 
-    def update(self):
-        pass
 
+
+
+
+
+
+class Vendedor(GameObject):
+    def __init__(self, assets_path):
+        super().__init__(assets_path, (0, 0))
+        self.scene_ratio = 0.69
+        self.expr_name = None
+        self.expression = None
+        self.assets_path = assets_path
+
+    # Override
+    def loadImagesSetup(self, assets_path):
+        self.image = pygame.image.load(f'{assets_path}/body.png')
+
+    # Override
+    def screenSetup(self):
+        background = self.screen.getBackground()
+        self.resizeImage(self.scene_ratio, background)  # resize Body
+
+        self.expressionsDict = self.loadExpressions('assets/luks/expressions/')
+        self.selectExpression('happyface')
+
+        size = self.image.get_size()    # positionate
+        k = 0.15 * self.image.get_height()
+        self.setPos(background.center()[0]-size[0]/2, venda_pos[1] - k - size[1])
+
+    def selectExpression(self, expression_name):
+        self.expression = self.expressionsDict[expression_name]
+        self.expr_name = expression_name
+
+    def loadExpressions(self, directory_path):
+        background = self.screen.getBackground()
+        images = dict()
+        with Path(directory_path) as directory :
+            paths = [x for x in directory.iterdir() if not x.is_dir()]
+            for image_path in paths:
+                temp_image = pygame.image.load(image_path)
+                temp_image = self.resizeThisImage(temp_image, self.scene_ratio, background)
+                images[image_path.stem] = temp_image
+                print(image_path.stem)
+        return images
+
+    def getExpressionName(self):
+        return self.expr_name
+
+    def getExpression(self):
+        return self.expression
+
+    def piscar(self):
+        anterior = self.getExpressionName()
+        self.selectExpression('blink')
+        sleep(0.2)
+        self.selectExpression(anterior)
+
+    # Override
+    def draw(self):
+        pos = self.getPos()
+        self.screen.blit(self.image, pos)
+        self.screen.blit(self.expression, pos)
+
+    # Override
+    def update(self, time):
+        #print(time)
+        if time%40 == 0:
+            threading.Thread(target=self.piscar).start()
+            
+
+
+
+# Criando objetos da Cena
+venda_pos = (background.center()[0], background.size()[1]*0.98)
 barraca = Barraca()
+vendedor = Vendedor('assets/luks')
+
+
+screen.addObject(background, vendedor, barraca)
+
+screen.setBackground(background)
+screen.screenSetup()
+
 print("--------------------")
 print("PRODUTOS CARREGADOS!")
 for produto in barraca.produtos:
@@ -195,59 +305,143 @@ print("--------------------")
 
 
 
-class Vendedor(GameObject):
+class Script:
     def __init__(self):
-        super().__init__('lks_seller.png', (0, 0))
-        self.image = self.resizeImage(self.image)
-
-        size = self.image.get_size()
-        k = 0.15 * self.image.get_height()
-        self.setPos(background.center()[0]-size[0]/2, venda_pos[1] - k - size[1])
-        
-        self.expressionsDict = self.loadExpressions('assets/expressions/')
-        self.expression = None
-        self.selectExpression('thinker')
-
-    def selectExpression(self, expression_name):
-        self.expression = self.expressionsDict[expression_name]
-
-    def resizeImage(self, image):
-        k = 0.69    # Fator de ajuste
-        Ko = background.heigth()/image.get_size()[1]    # Fator de proporção
-        return pygame.transform.scale_by(image, k*Ko)
-
-    def loadExpressions(self, directory_path):
-        images = dict()
-        with Path(directory_path) as directory :
-            paths = [x for x in directory.iterdir() if not x.is_dir()]
-            for image_path in paths:
-                images[image_path.stem] = self.resizeImage(pygame.image.load(image_path))
-                print(image_path)
-        return images
-
-    def draw(self):
-        pos = self.getPos()
-        self.screen.blit(self.image, pos)
-        self.screen.blit(self.expression, pos)
-
-    def update(self):
+        self.usos = 0
+        self.roteiro = None
+        self.limite = 0
+        self.setup()
+    
+    def setup(self):
         pass
 
-vendedor = Vendedor()
+    def update(self, time, *args):
+        self.action(time, args)
+        self.usos += 1
+        if self.usos == self.limite:
+            return self.finish()
+
+    def action(self, time, *args):
+        pass
+
+    def finish(self):
+        self.roteiro.next()
 
 
-cena = [background, vendedor, barraca]
-for obj in cena:
-    screen.addObject(obj)
+class Roteiro:
+    def __init__(self):
+        self.roteiro = []
+        self.selected = 0
+        self.time = 0
+        self.playing = False
+        self.looping = False
 
-screen.setBackground(background)
+    def addScript(self, *scripts):
+        for script in scripts:
+            self.roteiro.append(script)
+            script.roteiro = self
+
+    def getSelectedScript(self):
+        return self.roteiro[self.selected]
+
+    def play(self):
+        self.selected = 0
+        self.playing = True
+
+    def stop(self):
+        self.playing = False
+
+    def next(self):
+        self.time = -1
+        self.selected += 1
+        maximum = len(self.roteiro)
+        if self.selected >= maximum:
+            if self.looping:
+                self.selected = 0
+            else:
+                self.stop()
+
+    def update(self):
+        if not self.playing:
+            return
+        script = self.getSelectedScript()
+        script.update(self.time)
+        self.time += 1
+
+# Script
+class BoasVindas(Script):
+    def setup(self):
+        self.limite = 1
+
+    def action(self, time, *args):
+        print("Seja bem vindo à nossa Loja!")
+        print("Temos dos mais diversos produtos!")
 
 
-running = True
-while running:
+# Script
+class Atendimento(Script):
+    def action(self, time, *args):
+        if time > 0:
+            return
+        threading.Thread(target=self.atendimento).start()
+
+    def atendimento(self):
+        while RUNNING:
+            print("Pois então, o que você quer?")
+            pedido = input("Pedido:")
+            print(f"Ah, {pedido}! Ótima escolha!\n")
+
+
+'''
+class Animation:
+    def __init__(self, *frames):
+        self.frames = []
+        self.actual_frame = 0
+        self.playing = False
+        self.looping = False
+
+    def play(self):
+        self.playing = True
+        self.actual_frame = 0
+
+    def addFrames(self, *images):
+        for image in images:
+            self.frames.append(image)
+
+    def stop(self):
+        self.playing = False
+
+    def getFrame(self):
+        return self.frames[self.actual_frame]
+
+    def next(self):
+        self.actual_frame += 1
+        if self.actual_frame >= len(self.frames):
+            if self.looping:
+                self.actual_frame = 0
+            else:
+                self.stop()
+
+    def update(self):
+        self.next()
+'''
+
+
+
+
+
+
+roteiro = Roteiro()
+roteiro.addScript(BoasVindas(), Atendimento())
+roteiro.play()
+
+
+RUNNING = True
+TIME = 0
+while RUNNING:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            RUNNING = False
         '''
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_d:
@@ -264,12 +458,15 @@ while running:
                 camera.zoom -= 0.1
         '''
 
+    roteiro.update()
+
     screen.display.fill('black')
 
-    screen.update()
+    screen.update(TIME)
 
     pygame.display.flip()
 
-    clock.tick(60)  # limits FPS to 60
+    clock.tick(FPS)  # limits FPS to 60
+    TIME += 1
 
 pygame.quit()

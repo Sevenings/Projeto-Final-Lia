@@ -1,4 +1,5 @@
-files = ["listagem", "afirmativo"]
+#files = ["listagem", "afirmativo"]
+files = ["negativo"]
 
 for c in files:
     inputFile = "TEXTOS_ORIGINAIS/LIMPO_TEXTO_" + c.upper() + ".txt"
