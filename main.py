@@ -5,11 +5,14 @@ import json
 import threading
 from time import sleep
 from random import randint
+import speech_recognition as sr
 
 
 pygame.init()
 clock = pygame.time.Clock()
 FPS = 60
+
+LANG = 'en'
 
 
 class Screen:
@@ -237,7 +240,7 @@ class Vendedor(GameObject):
         self.resizeImage(self.scene_ratio, background)  # resize Body
 
         self.expressionsDict = self.loadExpressions('assets/luks/expressions/')
-        self.selectExpression('happyface')
+        self.selectExpression('closedmouth')
 
         size = self.image.get_size()    # positionate
         k = 0.15 * self.image.get_height()
@@ -246,6 +249,9 @@ class Vendedor(GameObject):
     def selectExpression(self, expression_name):
         self.expression = self.expressionsDict[expression_name]
         self.expr_name = expression_name
+
+    def setIdleExpression(self):
+        self.selectExpression('closedmouth')
 
     def loadExpressions(self, directory_path):
         background = self.screen.getBackground()
@@ -286,25 +292,6 @@ class Vendedor(GameObject):
 
 
 
-# Criando objetos da Cena
-venda_pos = (background.center()[0], background.size()[1]*0.98)
-barraca = Barraca()
-vendedor = Vendedor('assets/luks')
-
-
-screen.addObject(background, vendedor, barraca)
-
-screen.setBackground(background)
-screen.screenSetup()
-
-print("--------------------")
-print("PRODUTOS CARREGADOS!")
-for produto in barraca.produtos:
-    print(produto.name, produto.type, produto.price, produto.image)
-print("--------------------")
-
-
-
 class Script:
     def __init__(self):
         self.usos = 0
@@ -335,6 +322,7 @@ class Roteiro:
         self.time = 0
         self.playing = False
         self.looping = False
+        self.has_skipped = False
 
     def addScript(self, *scripts):
         for script in scripts:
@@ -352,7 +340,7 @@ class Roteiro:
         self.playing = False
 
     def next(self):
-        self.time = -1
+        self.time = 0
         self.selected += 1
         maximum = len(self.roteiro)
         if self.selected >= maximum:
@@ -360,12 +348,16 @@ class Roteiro:
                 self.selected = 0
             else:
                 self.stop()
+        self.has_skipped = True
 
     def update(self):
         if not self.playing:
             return
         script = self.getSelectedScript()
         script.update(self.time)
+        if self.has_skipped:
+            self.has_skipped = False
+            return
         self.time += 1
 
 # Script
@@ -380,16 +372,60 @@ class BoasVindas(Script):
 
 # Script
 class Atendimento(Script):
+    def __init__(self, vendedor):
+        super().__init__()
+        self.vendedor = vendedor
+
     def action(self, time, *args):
         if time > 0:
             return
-        threading.Thread(target=self.atendimento).start()
+        threading.Thread(target=self.atendimento, args=(self.vendedor,)).start()
 
-    def atendimento(self):
-        while RUNNING:
-            print("Pois então, o que você quer?")
-            pedido = input("Pedido:")
-            print(f"Ah, {pedido}! Ótima escolha!\n")
+    def atendimento(self, vendedor):
+        global RUNNING, LANG
+        r = sr.Recognizer()
+        with sr.Microphone() as source:
+            while RUNNING:
+                audio = r.listen(source)
+                try:
+                    vendedor.selectExpression('thinker')
+
+                    comando = r.recognize_google(audio, language=LANG)
+                    print(comando)
+
+                    vendedor.setIdleExpression()
+                except sr.exceptions.UnknownValueError:
+                    print("Não reconheci")
+            self.finish()
+
+
+# Script
+class Zoom(Script):
+    def __init__(self, camera, initialZoom, finalZoom, duration):
+        super().__init__()
+        self.initialZoom = initialZoom
+        self.camera = camera
+        self.finalZoom = finalZoom
+        self.duration = duration
+
+    def action(self, time, *args):
+        if time > 0:
+            return
+        threading.Thread(target=self.makeZoom).start()
+
+    def makeZoom(self):
+        zi = self.initialZoom
+        zo = self.finalZoom
+        duration = self.duration
+
+        for i in range(duration):
+            self.camera.zoom = i/duration * (zo - zi) + zi
+            sleep(0.5/duration)
+
+        self.finish()
+
+        
+
 
 
 '''
@@ -431,9 +467,28 @@ class Animation:
 
 
 
+# Criando objetos da Cena
+venda_pos = (background.center()[0], background.size()[1]*0.98)
+barraca = Barraca()
+vendedor = Vendedor('assets/luks')
+
+screen.addObject(background, vendedor, barraca)
+
+screen.setBackground(background)
+screen.screenSetup()
+
 roteiro = Roteiro()
-roteiro.addScript(BoasVindas(), Atendimento())
+roteiro.addScript(Zoom(camera, 1, 1.5, 100), BoasVindas(), Atendimento(vendedor))
 roteiro.play()
+
+
+print("--------------------")
+print("PRODUTOS CARREGADOS!")
+for produto in barraca.produtos:
+    print(produto.name, produto.type, produto.price, produto.image)
+print("--------------------")
+
+
 
 
 RUNNING = True
@@ -469,4 +524,5 @@ while RUNNING:
     clock.tick(FPS)  # limits FPS to 60
     TIME += 1
 
+    #print(clock.get_fps())
 pygame.quit()

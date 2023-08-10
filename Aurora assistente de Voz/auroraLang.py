@@ -5,7 +5,6 @@ lang = 'pt'
 
 # Criar um reconhecedor de voz
 r = sr.Recognizer()
-
 # Abrir o microfone para capturar áudio
 with sr.Microphone() as source:
     os.system('clear')

@@ -1,3 +1,26 @@
 Features: Animação Câmera
 
 Lembrete: Explicitar o Objetivo do projeto no Documento
+
+PLanejamento:
+    Dia 9:
+        (X) Sistema de reconhecimento de voz funcionando.
+    Dia 10:
+        ( ) UI funcional ( Aparecer quando der o comando "Listar" )
+    Dia 11:
+    Dia 12:
+    Dia 13:
+    Dia 14:
+    Dia 15:
+    Dia 16:
+    Dia 17:
+    Dia 18 - Projeto Pronto:
+        ( ) Itens Com Textura ( João Pedro )
+        ( ) Sistema de classificação funcionando
+        ( ) Sistema de compras funcionando
+        ( ) 2 vendedores ( Pelo menos 1 vendedor aleatório ) ( Opcional )
+        ( ) Elementos da UI do tipo: Mostrar quantas moedas o player tem
+        ( ) Mostrar na Tela "O que o vendedor reconhece que você está dizendo"
+        ( ) Sistema de "Boas Vindas e Até Mais"
+        ( ) Botão de Falar
+
