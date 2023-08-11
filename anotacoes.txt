@@ -6,12 +6,17 @@ PLanejamento:
     Dia 9:
         (X) Sistema de reconhecimento de voz funcionando.
     Dia 10:
+        (X) Modelo de teste funcionando.
         ( ) UI funcional ( Aparecer quando der o comando "Listar" )
     Dia 11:
+        ( ) Criação de datasets de saudação e despedida.
+        ( ) Treinamento de modelo com todas as categorias.
     Dia 12:
     Dia 13:
     Dia 14:
+        ( ) Aperfeiçoamento dos parâmetros de treino do modelo.
     Dia 15:
+        ( ) Algoritmo de identificação de produtos.
     Dia 16:
     Dia 17:
     Dia 18 - Projeto Pronto:
