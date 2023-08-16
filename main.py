@@ -6,18 +6,97 @@ import threading
 from time import sleep
 from random import randint
 import speech_recognition as sr
+from fastai.text.all import *
+import os, re
 
+
+
+# Carrega o Classificador 
+CLASSIFIER = load_learner('Modelo_NLP_Lia/colab_complete_model_vs1.0')
 
 pygame.init()
 clock = pygame.time.Clock()
 FPS = 60
 
+FONT = pygame.font.Font(size=24)
+
 LANG = 'en'
+
+MONEY = 100
+INVENTORY = []
+
+def listar(*args):
+    print("Here! There are all my products:")
+    print("Name \t Type \t Price")
+    for produto in barraca.produtos:
+        print(f"{produto.name} \t {produto.type} \t {produto.price}")
+
+
+def comprar(*args): # (vendedor, produto)
+    vendedor = args[0]
+    threading.Thread(target=vendedor.getPaidExpression).start()
+    produto = args[1][0]
+    if produto is None:
+        print("Sorry, don't undertand.")
+        return
+    global MONEY
+    if produto.price > MONEY:
+        print("Hey! You don't have enought money!")
+        sleep(1)
+        print(f"You only have {MONEY} coins.")
+        return
+    MONEY -= produto.price
+    INVENTORY.append(produto)
+    print(f"Alright! The {produto.name} is all yours!")
+    return
+
+
+def devolver(*args):
+    threading.Thread(target=vendedor.refundExpression).start()
+    print("You were refunded!")
+
+
+def bom_dia(*args):
+    print("Hello! Be welcome to my store!")
+    sleep(1)
+    print("How can I help you?")
+
+def tchau(*args):
+    global RUNNING
+    RUNNING = False
+
+
+CAT_LISTAGEM = 'LIST'
+CAT_BUYING = 'BUY'
+CAT_REFUNDING = 'REFUND'
+CAT_HELLO = 'GREETING'
+CAT_GOODBYE = 'GOODBYE'
+
+ACTIONS = {
+        CAT_LISTAGEM: listar,
+        CAT_BUYING: comprar,
+        CAT_REFUNDING: devolver,
+        CAT_HELLO: bom_dia,
+        CAT_GOODBYE: tchau
+}
+
+
+def findProduct(text):
+    text = re.sub('[,.:;\'"!?-_+=]', '', text.lower())
+    for product in barraca.produtos:
+        if text.count(f' {product.name} '.lower()) > 0:
+            return product
+    return None
+
+
+
+
+
 
 
 class Screen:
     def __init__(self):
-        self.size = (960, 520)
+        self.size = (960*5/4, 520*5/4)
         self.display = pygame.display.set_mode(self.size, flags=pygame.SCALED)   
         self.cena = []
         self.camera = None
@@ -39,6 +118,7 @@ class Screen:
     def appendCamera(self, camera):
         self.camera = camera
         camera.screen = self
+        camera.size = self.size
 
     def addObject(self, *objs):
         for o in objs:
@@ -85,8 +165,8 @@ screen = Screen()
 
 class Camera:
     def __init__(self):
-        self.size = (960, 520)
-        self.pos = (0, 0)
+        self.size = None
+        self.pos = (15, 0)
         self.zoom = 1
         self.screen = None
 
@@ -104,6 +184,9 @@ class Camera:
 
     def setPos(self, x, y):
         self.pos = (x, y)
+
+    def setCenter(self, x, y):
+        self.setPos(x - self.size[0]/2, y - self.size[1]/2)
 
 camera = Camera()
 screen.appendCamera(camera)
@@ -213,8 +296,19 @@ class Barraca(GameObject):
         self.produtos = loadItens('itens/itens.json')
 
     def draw(self): #Look Here
-        size = self.image.get_size()
         self.screen.blit(self.image, self.getPos())
+
+    def getProdutos(self):
+        return self.produtos
+
+
+
+def buyingRequestAbout(request, productList):
+    for product in productList:
+        name = product.name
+        if request.find(name):
+            return product
+    return None
 
 
 
@@ -271,6 +365,16 @@ class Vendedor(GameObject):
     def getExpression(self):
         return self.expression
 
+    def getPaidExpression(self):
+        self.selectExpression('moneyeyes')
+        sleep(2)
+        self.setIdleExpression()
+
+    def refundExpression(self):
+        self.selectExpression('fearsad')
+        sleep(1.5)
+        self.setIdleExpression()
+
     def piscar(self):
         anterior = self.getExpressionName()
         self.selectExpression('blink')
@@ -285,7 +389,6 @@ class Vendedor(GameObject):
 
     # Override
     def update(self, time):
-        #print(time)
         if time%40 == 0:
             threading.Thread(target=self.piscar).start()
             
@@ -313,6 +416,7 @@ class Script:
 
     def finish(self):
         self.roteiro.next()
+
 
 
 class Roteiro:
@@ -360,6 +464,7 @@ class Roteiro:
             return
         self.time += 1
 
+
 # Script
 class BoasVindas(Script):
     def setup(self):
@@ -382,31 +487,71 @@ class Atendimento(Script):
         threading.Thread(target=self.atendimento, args=(self.vendedor,)).start()
 
     def atendimento(self, vendedor):
-        global RUNNING, LANG
-        r = sr.Recognizer()
+        global RUNNING, LANG, AUDIO_PRESSING
         with sr.Microphone() as source:
+            #os.system('clear')
             while RUNNING:
-                audio = r.listen(source)
-                try:
-                    vendedor.selectExpression('thinker')
 
-                    comando = r.recognize_google(audio, language=LANG)
-                    print(comando)
+                # Transcreve o audio para Texto 
+                success, comando = transcribe(source, vendedor)
+                arguments = []
 
-                    vendedor.setIdleExpression()
-                except sr.exceptions.UnknownValueError:
-                    print("Não reconheci")
+                if not success:
+                    continue
+
+                # Utiliza o Modelo para classificar 
+                categoria = CLASSIFIER.predict(comando)[0]
+
+                produto = None
+                if categoria == CAT_BUYING or categoria == CAT_REFUNDING:
+                    produto = findProduct(comando)
+                    if produto:
+                        arguments.append(produto)
+
+
+                # Order Text Assemble
+                order_text = f"{categoria}"
+                if produto:
+                    order_text += f' {produto.name}'
+
+                # Ask if order is correct
+                print(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
+                success, comando = transcribe(source, vendedor)
+
+                if not success or comando.lower() == 'no':
+                    continue
+
+                ACTIONS[categoria](vendedor, arguments)
             self.finish()
+
+
+
+
+def transcribe(source, vendedor):
+    if vendedor.getExpressionName() == 'thinker':
+        vendedor.setIdleExpression()
+    r = sr.Recognizer()
+    audio = r.listen(source)
+    vendedor.selectExpression('thinker')
+    try:
+        comando = r.recognize_google(audio, language=LANG)
+        print(f"I've heard: \"{comando}\"")
+        return True, comando
+    except sr.exceptions.UnknownValueError:
+        print("Sorry, I didn't understand")
+        return False, None
+
 
 
 # Script
 class Zoom(Script):
-    def __init__(self, camera, initialZoom, finalZoom, duration):
+    def __init__(self, camera, initialZoom, finalZoom, finalPos, duration):
         super().__init__()
         self.initialZoom = initialZoom
         self.camera = camera
         self.finalZoom = finalZoom
         self.duration = duration
+        self.finalPos = finalPos
 
     def action(self, time, *args):
         if time > 0:
@@ -415,52 +560,20 @@ class Zoom(Script):
 
     def makeZoom(self):
         zi = self.initialZoom
-        zo = self.finalZoom
+        zf = self.finalZoom
+        pi = self.camera.getPos()
+        pf = self.finalPos
         duration = self.duration
 
         for i in range(duration):
-            self.camera.zoom = i/duration * (zo - zi) + zi
+            self.camera.zoom = i/duration * (zf - zi) + zi
+            self.camera.setPos(i/duration*(pf[0] - pi[0]) + pi[0], i/duration*(pf[1] - pi[1]) + pi[1])
             sleep(0.5/duration)
+            # print(self.camera.pos, self.camera.zoom)
 
         self.finish()
 
         
-
-
-
-'''
-class Animation:
-    def __init__(self, *frames):
-        self.frames = []
-        self.actual_frame = 0
-        self.playing = False
-        self.looping = False
-
-    def play(self):
-        self.playing = True
-        self.actual_frame = 0
-
-    def addFrames(self, *images):
-        for image in images:
-            self.frames.append(image)
-
-    def stop(self):
-        self.playing = False
-
-    def getFrame(self):
-        return self.frames[self.actual_frame]
-
-    def next(self):
-        self.actual_frame += 1
-        if self.actual_frame >= len(self.frames):
-            if self.looping:
-                self.actual_frame = 0
-            else:
-                self.stop()
-
-    def update(self):
-        self.next()
-'''
 
 
 
@@ -478,40 +591,61 @@ screen.setBackground(background)
 screen.screenSetup()
 
 roteiro = Roteiro()
-roteiro.addScript(Zoom(camera, 1, 1.5, 100), BoasVindas(), Atendimento(vendedor))
+roteiro.addScript(Zoom(camera, 1, 1.5, (15, 90), 50), BoasVindas(), Atendimento(vendedor))
 roteiro.play()
 
+# Testando findProduct
+texto = 'I would like an fruit, a phone charger! Please!'
+produto = findProduct(texto)
+print(produto)
 
+'''
 print("--------------------")
 print("PRODUTOS CARREGADOS!")
-for produto in barraca.produtos:
-    print(produto.name, produto.type, produto.price, produto.image)
+listar()
 print("--------------------")
+'''
 
 
 
 
+AUDIO_PRESSING = False
 RUNNING = True
 TIME = 0
 while RUNNING:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             RUNNING = False
-        '''
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_d:
-                camera.pos = (camera.pos[0] + 10, camera.pos[1])
-            elif event.key == pygame.K_a:
-                camera.pos = (camera.pos[0] - 10, camera.pos[1])
+            if event.key == pygame.K_c:
+                os.system('clear')
+            '''
+            if event.key == pygame.K_v:
+                AUDIO_PRESSING = True
+                print("Listening!")
+            '''
+            '''
+            if event.key == pygame.K_a:
+                pos = camera.getPos()
+                camera.setPos(pos[0]-10, pos[1])
+            elif event.key == pygame.K_d:
+                pos = camera.getPos()
+                camera.setPos(pos[0]+10, pos[1])
             elif event.key == pygame.K_w:
-                camera.pos = (camera.pos[0], camera.pos[1] - 10)
+                pos = camera.getPos()
+                camera.setPos(pos[0], pos[1]-10)
             elif event.key == pygame.K_s:
-                camera.pos = (camera.pos[0], camera.pos[1] + 10)
-            elif event.key == pygame.K_z:
-                camera.zoom += 0.1
-            elif event.key == pygame.K_x:
-                camera.zoom -= 0.1
+                pos = camera.getPos()
+                camera.setPos(pos[0]-10, pos[1]+10)
+            print(camera.getPos())
+            '''
         '''
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_v:
+                AUDIO_PRESSING = False
+                print("Stopped.")
+        '''
+
 
     roteiro.update()
 
@@ -523,6 +657,6 @@ while RUNNING:
 
     clock.tick(FPS)  # limits FPS to 60
     TIME += 1
+    # print(TIME)
 
-    #print(clock.get_fps())
 pygame.quit()

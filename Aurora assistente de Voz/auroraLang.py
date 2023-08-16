@@ -1,7 +1,7 @@
 import speech_recognition as sr
 import os
 
-lang = 'pt'
+lang = 'en'
 
 # Criar um reconhecedor de voz
 r = sr.Recognizer()

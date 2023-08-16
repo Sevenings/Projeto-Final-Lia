@@ -1,16 +1,6 @@
 {"itens": [
-    {"type": "fruta", "name": "Maçã", "price": 6, "image": null},
-    {"type": "fruta", "name": "Banana", "price": 3, "image": null},
-    {"type": "fruta", "name": "Mamão", "price": 5, "image": null},
-    {"type": "fruta", "name": "Manga", "price": 5, "image": null},
-    {"type": "fruta", "name": "Melancia", "price": 1, "image": null},
-    {"type": "eletronico", "name": "Carregador de Celular", "price": 25, "image": null},
-    {"type": "eletronico", "name": "Fones de Ouvido", "price": 15, "image": null},
-    {"type": "eletronico", "name": "Capa de Celular", "price": 10, "image": null},
-    {"type": "roupa", "name": "Camisa Verde", "price": 55, "image": null},
-    {"type": "roupa", "name": "Camisa Azul", "price": 55, "image": null},
-    {"type": "roupa", "name": "Camisa Amarela", "price": 55, "image": null},
-    {"type": "roupa", "name": "Calça Jeans", "price": 60, "image": null},
-    {"type": "roupa", "name": "Shorts", "price": 40, "image": null},
-    {"type": "roupa", "name": "Sapato", "price": 45, "image": null}
+    {"type": "fruit", "name": "Apple", "price": 6, "image": null},
+    {"type": "fruit", "name": "Banana", "price": 3, "image": null},
+    {"type": "fruit", "name": "Mango", "price": 5, "image": null},
+    {"type": "fruit", "name": "Watermelon", "price": 1, "image": null}
 ]}

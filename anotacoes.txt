@@ -20,12 +20,19 @@ PLanejamento:
     Dia 16:
     Dia 17:
     Dia 18 - Projeto Pronto:
+        ( ) UI funcional ( Aparecer quando der o comando "Listar" )
+        ( ) Elementos da UI do tipo: Mostrar quantas moedas o player tem
         ( ) Itens Com Textura ( João Pedro )
-        ( ) Sistema de classificação funcionando
         ( ) Sistema de compras funcionando
         ( ) 2 vendedores ( Pelo menos 1 vendedor aleatório ) ( Opcional )
-        ( ) Elementos da UI do tipo: Mostrar quantas moedas o player tem
         ( ) Mostrar na Tela "O que o vendedor reconhece que você está dizendo"
         ( ) Sistema de "Boas Vindas e Até Mais"
-        ( ) Botão de Falar
+        ( ) Dataset de 'Saudação' e 'Despedida'
+        ( ) Adicionar outra lingua (Francês)
+            ^Criar Datasets para outra lingua
+
+
+
+
+    [Desbancado] Botão de Falar 
 
