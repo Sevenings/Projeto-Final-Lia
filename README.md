@@ -1,5 +1,20 @@
 # Projeto Final LIA
 
+### Alunos
+ Lucas Vinícius de Lima e Jonathas dos Santos.
+
+### PARA O PROFESSOR:
+- O documento .pdf de nosso projeto está guardado na pasta "Documento".
+- O arquivo do modelo é maior do que o limite de 100MB do git, então na
+  pasta "Modelo_NLP_Lia" há um link para baixar o modelo. Ao baixar,
+  coloque-o na pasta "Modelo_NLP_Lia".
+- Para rodar o jogo instale as bibliotecas:
+  ```pip install speech_recognition```
+  ```pip install pygame```
+  ```pip install fastai```
+  e dê um
+  ```python main.py```
+
 ### Proposta:
 ```Criar um ambiente que ajude no aprendizado de uma língua estrangeira.```
 
