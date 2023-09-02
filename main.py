@@ -53,10 +53,13 @@ def listar(*args):
 def comprar(*args): # (vendedor, produto)
     vendedor = args[0]
     threading.Thread(target=vendedor.getPaidExpression).start()
-    produto = args[1][0]
-    if produto is None:
+
+    if len(args[1]) == 0:
         print("Sorry, don't undertand.")
         return
+
+    produto = args[1][0]
+
     global MONEY
     if produto.price > MONEY:
         print("Hey! You don't have enought money!")
@@ -521,6 +524,13 @@ class LoopInterrupt(Exception):
         self.mensagem = mensagem
         super().__init__(self.mensagem)
 
+# Caminho para o arquivo de audio temporário
+directory = os.path.dirname(os.path.abspath(__file__))
+subDir = "tmp"
+arquivo = "audio.wav"
+
+file_path = os.path.join(os.path.join(directory, subDir), arquivo)
+
 # Script
 class Atendimento(Script):
     def __init__(self, vendedor):
@@ -535,13 +545,6 @@ class Atendimento(Script):
     def atendimento(self, vendedor):
         global RUNNING, LANG, AUDIO_PRESSING
         #os.system('clear')
-
-        # Caminho para o arquivo
-        directory = os.path.dirname(os.path.abspath(__file__))
-        subDir = "tmp"
-        arquivo = "audio.wav"
-
-        file_path = os.path.join(os.path.join(directory, subDir), arquivo)
 
         # Indica o modo da interação
         # True -> O cliente tomou a iniciativa de interação
@@ -590,9 +593,13 @@ class Atendimento(Script):
 
                     interaction = False
                 else:
-                    if not success or comando.lower() == 'no':
+                    if not success:
                         continue
+
                     interaction = True
+                    if comando.lower() == 'no':
+                        continue
+                    
                     ACTIONS[categoria](vendedor, arguments)
 
                 sleep(1/60)
@@ -696,7 +703,10 @@ try:
                 RUNNING = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_c:
-                    os.system('clear')
+                    if sistema == "Windows":
+                        os.system('cls')
+                    else:
+                        os.system('clear')
                 if event.key == pygame.K_q:
                     AUDIO_PRESSING = True if not AUDIO_PRESSING else False
                     
@@ -743,4 +753,21 @@ except KeyboardInterrupt:
 except Exception as e:
     print(str(e))
 
+# Apaga arquivo de audio auxiliar
+try:
+    if sistema == "Windows":
+        cmd = "del " + file_path
+    else:
+        cmd = "rm " + file_path
+    os.system(cmd)
+except Exception:
+    pass
+# Encerrar a gravação
+print("Encerrando gravação.")
+
+stream.stop_stream()
+stream.close()
+p.terminate()
+
+# Encerra o pygame
 pygame.quit()
