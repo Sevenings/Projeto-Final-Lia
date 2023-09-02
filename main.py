@@ -10,10 +10,27 @@ from fastai.text.all import *
 import os, re
 import wave
 import pyaudio
+import pathlib
+import platform
 
+#Identificando o sistema operacional
+sistema = platform.system()
+
+if sistema == "Windows":
+    temp = pathlib.PosixPath
+    pathlib.PosixPath = pathlib.WindowsPath
+
+# Caminho para o modelo
+directory = os.path.dirname(os.path.abspath(__file__))
+subDir = "Modelo_NLP_Lia"
+arquivo = "colab_complete_model_vs1_0.pth"
+
+model_path = Path(os.path.join(os.path.join(directory, subDir), arquivo))
+
+print(str(model_path))
 
 # Carrega o Classificador 
-CLASSIFIER = load_learner("Modelo_NLP_Lia/colab_complete_model_vs1_0.pth")
+CLASSIFIER = load_learner(model_path)
 
 pygame.init()
 clock = pygame.time.Clock()
