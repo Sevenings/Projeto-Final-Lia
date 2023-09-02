@@ -8,17 +8,18 @@ from random import randint
 import speech_recognition as sr
 from fastai.text.all import *
 import os, re
-
+import wave
+import pyaudio
 
 
 # Carrega o Classificador 
-CLASSIFIER = load_learner('Modelo_NLP_Lia/colab_complete_model_vs1.0')
+CLASSIFIER = load_learner("Modelo_NLP_Lia/colab_complete_model_vs1_0.pth")
 
 pygame.init()
 clock = pygame.time.Clock()
 FPS = 60
 
-FONT = pygame.font.Font(size=24)
+#FONT = pygame.font.Font(size=24)
 
 LANG = 'en'
 
@@ -65,7 +66,6 @@ def tchau(*args):
     global RUNNING
     RUNNING = False
 
-
 CAT_LISTAGEM = 'LIST'
 CAT_BUYING = 'BUY'
 CAT_REFUNDING = 'REFUND'
@@ -89,10 +89,33 @@ def findProduct(text):
     return None
 
 
+# Configurações do pyAudio
+FORMAT = pyaudio.paInt16  # Formato de áudio (16 bits)
+CHANNELS = 1  # Número de canais (mono)
+RATE = 44100  # Taxa de amostragem em Hz
+CHUNK = 1024  # Tamanho do buffer
 
+# Inicializar PyAudio
+p = pyaudio.PyAudio()
 
+stream = p.open(format=FORMAT,
+                channels=CHANNELS,
+                rate=RATE,
+                input=True,
+                frames_per_buffer=CHUNK)
+stream.start_stream()
 
+def salvar_audio(frames, path):
 
+    try:
+        with wave.open(path, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(p.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b"".join(frames))
+            print(f"Áudio gravado salvo em {path}")
+    except Exception as e:
+        print(str(e))
 
 class Screen:
     def __init__(self):
@@ -475,6 +498,12 @@ class BoasVindas(Script):
         print("Temos dos mais diversos produtos!")
 
 
+# Excessão de Interrupção de loop
+class LoopInterrupt(Exception):
+    def __init__(self, mensagem):
+        self.mensagem = mensagem
+        super().__init__(self.mensagem)
+
 # Script
 class Atendimento(Script):
     def __init__(self, vendedor):
@@ -488,12 +517,33 @@ class Atendimento(Script):
 
     def atendimento(self, vendedor):
         global RUNNING, LANG, AUDIO_PRESSING
-        with sr.Microphone() as source:
-            #os.system('clear')
-            while RUNNING:
+        #os.system('clear')
 
-                # Transcreve o audio para Texto 
-                success, comando = transcribe(source, vendedor)
+        # Caminho para o arquivo
+        directory = os.path.dirname(os.path.abspath(__file__))
+        subDir = "tmp"
+        arquivo = "audio.wav"
+
+        file_path = os.path.join(os.path.join(directory, subDir), arquivo)
+
+        sleep(1/60)
+
+        while RUNNING:
+
+            try:
+                frames = []  # Armazenar os quadros de áudio
+                if AUDIO_PRESSING:
+                    while True:
+                        data = stream.read(CHUNK)
+                        frames.append(data)
+                        if not AUDIO_PRESSING: raise LoopInterrupt("Loop Interrompido")
+            except LoopInterrupt:
+                salvar_audio(frames, file_path)
+
+                with sr.AudioFile(file_path) as source:
+                    # Transcreve o audio para Texto 
+                    success, comando = transcribe(source, vendedor)
+
                 arguments = []
 
                 if not success:
@@ -522,16 +572,20 @@ class Atendimento(Script):
                     continue
 
                 ACTIONS[categoria](vendedor, arguments)
-            self.finish()
+        print("Finished")
+        self.finish()
 
 
 
 
 def transcribe(source, vendedor):
+
     if vendedor.getExpressionName() == 'thinker':
         vendedor.setIdleExpression()
+
     r = sr.Recognizer()
-    audio = r.listen(source)
+    audio = r.record(source)
+
     vendedor.selectExpression('thinker')
     try:
         comando = r.recognize_google(audio, language=LANG)
@@ -612,51 +666,58 @@ print("--------------------")
 AUDIO_PRESSING = False
 RUNNING = True
 TIME = 0
-while RUNNING:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            RUNNING = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_c:
-                os.system('clear')
+try:
+    while RUNNING:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                RUNNING = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_c:
+                    os.system('clear')
+                if event.key == pygame.K_q:
+                    AUDIO_PRESSING = True if not AUDIO_PRESSING else False
+                    
+                    if not AUDIO_PRESSING:
+                        print("not", end=" ")
+                    print("Listening!")
+
+                '''
+                if event.key == pygame.K_a:
+                    pos = camera.getPos()
+                    camera.setPos(pos[0]-10, pos[1])
+                elif event.key == pygame.K_d:
+                    pos = camera.getPos()
+                    camera.setPos(pos[0]+10, pos[1])
+                elif event.key == pygame.K_w:
+                    pos = camera.getPos()
+                    camera.setPos(pos[0], pos[1]-10)
+                elif event.key == pygame.K_s:
+                    pos = camera.getPos()
+                    camera.setPos(pos[0]-10, pos[1]+10)
+                print(camera.getPos())
+                '''
             '''
-            if event.key == pygame.K_v:
-                AUDIO_PRESSING = True
-                print("Listening!")
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_v:
+                    AUDIO_PRESSING = False
+                    print("Stopped.")
             '''
-            '''
-            if event.key == pygame.K_a:
-                pos = camera.getPos()
-                camera.setPos(pos[0]-10, pos[1])
-            elif event.key == pygame.K_d:
-                pos = camera.getPos()
-                camera.setPos(pos[0]+10, pos[1])
-            elif event.key == pygame.K_w:
-                pos = camera.getPos()
-                camera.setPos(pos[0], pos[1]-10)
-            elif event.key == pygame.K_s:
-                pos = camera.getPos()
-                camera.setPos(pos[0]-10, pos[1]+10)
-            print(camera.getPos())
-            '''
-        '''
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_v:
-                AUDIO_PRESSING = False
-                print("Stopped.")
-        '''
 
 
-    roteiro.update()
+        roteiro.update()
 
-    screen.display.fill('black')
+        screen.display.fill('black')
 
-    screen.update(TIME)
+        screen.update(TIME)
 
-    pygame.display.flip()
+        pygame.display.flip()
 
-    clock.tick(FPS)  # limits FPS to 60
-    TIME += 1
-    # print(TIME)
+        clock.tick(FPS)  # limits FPS to 60
+        TIME += 1
+
+except KeyboardInterrupt:
+    pass
+except Exception as e:
+    print(str(e))
 
 pygame.quit()
