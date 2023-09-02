@@ -543,7 +543,10 @@ class Atendimento(Script):
 
         file_path = os.path.join(os.path.join(directory, subDir), arquivo)
 
-        sleep(1/60)
+        # Indica o modo da interação
+        # True -> O cliente tomou a iniciativa de interação
+        # False -> O cliente está respondendo a uma pergunta
+        interaction = True
 
         while RUNNING:
 
@@ -565,31 +568,34 @@ class Atendimento(Script):
 
                 if not success:
                     continue
+                
+                if interaction:
+                    # Utiliza o Modelo para classificar 
+                    categoria = CLASSIFIER.predict(comando)[0]
 
-                # Utiliza o Modelo para classificar 
-                categoria = CLASSIFIER.predict(comando)[0]
+                    produto = None
+                    if categoria == CAT_BUYING or categoria == CAT_REFUNDING:
+                        produto = findProduct(comando)
+                        if produto:
+                            arguments.append(produto)
 
-                produto = None
-                if categoria == CAT_BUYING or categoria == CAT_REFUNDING:
-                    produto = findProduct(comando)
+
+                    # Order Text Assemble
+                    order_text = f"{categoria}"
                     if produto:
-                        arguments.append(produto)
+                        order_text += f' {produto.name}'
 
+                    # Ask if order is correct
+                    print(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
-                # Order Text Assemble
-                order_text = f"{categoria}"
-                if produto:
-                    order_text += f' {produto.name}'
+                    interaction = False
+                else:
+                    if not success or comando.lower() == 'no':
+                        continue
+                    interaction = True
+                    ACTIONS[categoria](vendedor, arguments)
 
-                # Ask if order is correct
-                print(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
-                success, comando = transcribe(source, vendedor)
-
-                if not success or comando.lower() == 'no':
-                    continue
-
-                ACTIONS[categoria](vendedor, arguments)
-        print("Finished")
+                sleep(1/60)
         self.finish()
 
 
