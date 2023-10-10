@@ -13,9 +13,10 @@ import pyaudio
 import pathlib
 import platform
 
-#Identificando o sistema operacional
+# Identifica o sistema operacional
 sistema = platform.system()
 
+# Adaptando script para sistema Windows
 if sistema == "Windows":
     temp = pathlib.PosixPath
     pathlib.PosixPath = pathlib.WindowsPath
@@ -118,6 +119,7 @@ CHUNK = 1024  # Tamanho do buffer
 # Inicializar PyAudio
 p = pyaudio.PyAudio()
 
+# Stream para captura de áudio
 stream = p.open(format=FORMAT,
                 channels=CHANNELS,
                 rate=RATE,
@@ -125,6 +127,7 @@ stream = p.open(format=FORMAT,
                 frames_per_buffer=CHUNK)
 stream.start_stream()
 
+# Salva frames de áudio em um arquivo de audio
 def salvar_audio(frames, path):
 
     try:
@@ -531,7 +534,7 @@ arquivo = "audio.wav"
 
 file_path = os.path.join(os.path.join(directory, subDir), arquivo)
 
-# Script
+# Script de atendimento
 class Atendimento(Script):
     def __init__(self, vendedor):
         super().__init__()
@@ -544,9 +547,8 @@ class Atendimento(Script):
 
     def atendimento(self, vendedor):
         global RUNNING, LANG, AUDIO_PRESSING
-        #os.system('clear')
 
-        # Indica o modo da interação
+        # A variável interaction indica o modo de interação
         # True -> O cliente tomou a iniciativa de interação
         # False -> O cliente está respondendo a uma pergunta
         interaction = True
@@ -554,54 +556,72 @@ class Atendimento(Script):
         while RUNNING:
 
             try:
-                frames = []  # Armazenar os quadros de áudio
+                frames = [] # Lista de frames de áudio
+
+                # O áudio apenas é capturado quando comando é dado
+                # por meio do pressionamento da tecla especificada
                 if AUDIO_PRESSING:
+                    # Loop de captura de áudio
                     while True:
                         data = stream.read(CHUNK)
                         frames.append(data)
                         if not AUDIO_PRESSING: raise LoopInterrupt("Loop Interrompido")
+            
+            # Se estiver ocorrendo uma captura de áudio e esta for interrompida, 
+            # o programa passa para a parte de processamento e gerenciamento do áudio
             except LoopInterrupt:
+
+                # Salva os frames em um arquivo de áudio
                 salvar_audio(frames, file_path)
 
-                with sr.AudioFile(file_path) as source:
-                    # Transcreve o audio para Texto 
+                # Transcreve o áudio para Texto
+                with sr.AudioFile(file_path) as source: 
                     success, comando = transcribe(source, vendedor)
 
                 arguments = []
 
+                # Se a transcrição não for realizada com sucesso uma nova tentativa é
+                # realizada
                 if not success:
                     continue
-                
+
                 if interaction:
-                    # Utiliza o Modelo para classificar 
+
+                    # Utiliza o Modelo para classificar a intenção por trás da interação
                     categoria = CLASSIFIER.predict(comando)[0]
 
+                    # Identifica o produto pedido e o coloca na lista de argumentos
                     produto = None
                     if categoria == CAT_BUYING or categoria == CAT_REFUNDING:
                         produto = findProduct(comando)
                         if produto:
                             arguments.append(produto)
 
-
-                    # Order Text Assemble
+                    # Cria uma string de ordem de pedido
                     order_text = f"{categoria}"
                     if produto:
                         order_text += f' {produto.name}'
 
-                    # Ask if order is correct
+                    # Pergunta se a ordem de pedido está correta
                     print(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
+                    # A próxima etapa da interação vem do vendedor
                     interaction = False
                 else:
-                    if not success:
-                        continue
 
+                    # A próxima etapa da interação vem do usuário
                     interaction = True
+
+                    # Se o programa tiver identificado a ordem de pedido incorretamente
+                    # nenhuma ação é tomada
                     if comando.lower() == 'no':
                         continue
                     
+                    # Se o programa tiver identificado a ordem de pedido corretamente
+                    # a ação função correspondente é acionada
                     ACTIONS[categoria](vendedor, arguments)
 
+                # Tick
                 sleep(1/60)
         self.finish()
 
@@ -693,9 +713,11 @@ print("--------------------")
 
 
 
-AUDIO_PRESSING = False
-RUNNING = True
+AUDIO_PRESSING = False # Representa o estado da captura de áudio
+RUNNING = True 
 TIME = 0
+
+# Loop de gerenciamento de eventos
 try:
     while RUNNING:
         for event in pygame.event.get():
@@ -762,6 +784,7 @@ try:
     os.system(cmd)
 except Exception:
     pass
+
 # Encerrar a gravação
 print("Encerrando gravação.")
 
