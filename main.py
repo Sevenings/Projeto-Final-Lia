@@ -44,6 +44,9 @@ LANG = 'en'
 MONEY = 100
 INVENTORY = []
 
+
+# Todas as ações que o feirante executa
+
 def listar(*args):
     print("Here! There are all my products:")
     print("Name \t Type \t Price")
@@ -93,6 +96,7 @@ CAT_REFUNDING = 'REFUND'
 CAT_HELLO = 'GREETING'
 CAT_GOODBYE = 'GOODBYE'
 
+# Dicionário com as ações do feirante
 ACTIONS = {
         CAT_LISTAGEM: listar,
         CAT_BUYING: comprar,
@@ -102,6 +106,7 @@ ACTIONS = {
 }
 
 
+# Algorítmo que retorna o NOME identificando "De qual produto estamos falando?"
 def findProduct(text):
     text = re.sub('[,.:;\'"!?-_+=]', '', text.lower())
     for product in barraca.produtos:
@@ -140,6 +145,8 @@ def salvar_audio(frames, path):
     except Exception as e:
         print(str(e))
 
+
+# Classe da Janela do Jogo
 class Screen:
     def __init__(self):
         self.size = (960*5/4, 520*5/4)
@@ -209,6 +216,7 @@ class Screen:
 screen = Screen()
 
 
+# Classe da Câmera do Jogo
 class Camera:
     def __init__(self):
         self.size = None
@@ -239,6 +247,7 @@ screen.appendCamera(camera)
 
 
 
+# Classe Genérica para todos os objetos do Jogo
 class GameObject(pygame.sprite.Sprite):
     def __init__(self, image_name, pos):
         self.loadImagesSetup(image_name)
@@ -297,6 +306,7 @@ class GameObject(pygame.sprite.Sprite):
         pass
 
 
+# Classe do Background do Jogo
 class Background(GameObject):
     def __init__(self):
         super().__init__('background.png', (0, 0))
@@ -309,6 +319,7 @@ class Background(GameObject):
 background = Background()
 
 
+# Classe dos Itens
 class Item:
     def __init__(self, name, type, price, image_path):
         self.name = name
@@ -319,6 +330,8 @@ class Item:
             self.image = pygame.image.load(image_path)
 
 
+# Função para carregar todos os itens de um arquivo
+# em uma lista de itens
 def loadItens(path):
     file = open(path)
     json_data = json.loads(file.read())
@@ -334,8 +347,10 @@ def loadItens(path):
 
 
 
+# Classe da Barraca do Jogo
 class Barraca(GameObject):
     def __init__(self):
+        # Carrega os itens e os salva numa variável interna
         super().__init__('shop.png', (0, 0))
         self.rect.midbottom = venda_pos
         self.pos = self.rect.topleft
@@ -344,11 +359,12 @@ class Barraca(GameObject):
     def draw(self): #Look Here
         self.screen.blit(self.image, self.getPos())
 
-    def getProdutos(self):
+    def getProdutos(self):  # Função para acessar os itens
         return self.produtos
 
 
 
+# Retorna o ITEM do qual o pedido menciona
 def buyingRequestAbout(request, productList):
     for product in productList:
         name = product.name
@@ -362,6 +378,7 @@ def buyingRequestAbout(request, productList):
 
 
 
+# Classe do Vendedor do Jogo
 class Vendedor(GameObject):
     def __init__(self, assets_path):
         super().__init__(assets_path, (0, 0))
@@ -441,6 +458,8 @@ class Vendedor(GameObject):
 
 
 
+# Classe Script, que guarda cada "Cena" do jogo. 
+# ex: Cena de dar zoom, cena de boas vindas, atendimento...
 class Script:
     def __init__(self):
         self.usos = 0
@@ -465,6 +484,8 @@ class Script:
 
 
 
+# Classe que guarda uma lista de Scripts e os "toca"
+# numa ordem lógica
 class Roteiro:
     def __init__(self):
         self.roteiro = []
@@ -511,7 +532,7 @@ class Roteiro:
         self.time += 1
 
 
-# Script
+# Script 
 class BoasVindas(Script):
     def setup(self):
         self.limite = 1
@@ -628,6 +649,8 @@ class Atendimento(Script):
 
 
 
+# Recebe uma AUDIO_SOURCE e retorna o TEXTO transcrito
+# Utilizada no Script Atendimento
 def transcribe(source, vendedor):
 
     if vendedor.getExpressionName() == 'thinker':
