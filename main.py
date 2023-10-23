@@ -23,7 +23,7 @@ if sistema == "Windows":
 # Caminho para o modelo
 directory = os.path.dirname(os.path.abspath(__file__))
 subDir = "Modelo_NLP_Lia"
-arquivo = "colab_complete_model_vs1_0.pth"
+arquivo = "colab_complete_model_vs1.0"
 
 model_path = Path(os.path.join(os.path.join(directory, subDir), arquivo))
 
@@ -58,7 +58,7 @@ def comprar(*args): # (vendedor, produto)
     threading.Thread(target=vendedor.getPaidExpression).start()
 
     if len(args[1]) == 0:
-        print("Sorry, don't undertand.")
+        print("Não entendi qual produto você quer.")
         return
 
     produto = args[1][0]
@@ -106,12 +106,37 @@ ACTIONS = {
 
 
 # Algorítmo que retorna o NOME identificando "De qual produto estamos falando?"
-def findProduct(text):
-    text = re.sub('[,.:;\'"!?-_+=]', '', text.lower())
-    for product in barraca.produtos:
-        if text.count(f' {product.name} '.lower()) > 0:
-            return product
+def classifyProductName(word, productList):
+    word = word.lower()
+    pontuacao_maior = 0
+    for item in productList:
+        referencia = item.name.lower()
+        letras_comuns = 0
+        tamanho = len(referencia)
+        for i in range(tamanho):
+            if word.startswith(referencia[:i+1]):
+                letras_comuns += 1
+            else:
+                break
+        if len(referencia) < len(word):
+            tamanho = len(word)
+        pontuacao = letras_comuns/tamanho # Calculo Pontuação
+        # print(f'Word: {word}, Referencia: {referencia}, Item: {item.name}, Pontos: {pontuacao}')
+        if pontuacao > pontuacao_maior:
+            maior_item = item
+            pontuacao_maior = pontuacao
+    if pontuacao_maior >= 0.7: # Pontuação de Corte
+        return maior_item
     return None
+
+def findProduct(request, productList):
+    possibilities = []
+    for word in request.split():
+        produto = classifyProductName(word, productList)
+        if produto: 
+            possibilities.append(produto)
+    return possibilities
+
 
 
 # Configurações do pyAudio
@@ -123,15 +148,14 @@ CHUNK = 1024  # Tamanho do buffer
 # Inicializar PyAudio
 p = pyaudio.PyAudio()
 
-stream = p.open(format=FORMAT,
-                channels=CHANNELS,
-                rate=RATE,
-                input=True,
-                frames_per_buffer=CHUNK)
-stream.start_stream()
+def createStream():
+    return p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=RATE,
+                    input=True,
+                    frames_per_buffer=CHUNK)
 
 def salvar_audio(frames, path):
-
     try:
         with wave.open(path, 'wb') as wf:
             wf.setnchannels(CHANNELS)
@@ -361,17 +385,6 @@ class Barraca(GameObject):
 
 
 
-# Retorna o ITEM do qual o pedido menciona
-def buyingRequestAbout(request, productList):
-    for product in productList:
-        name = product.name
-        if request.find(name):
-            return product
-    return None
-
-
-
-
 
 
 
@@ -571,16 +584,22 @@ class Atendimento(Script):
         # True -> O cliente tomou a iniciativa de interação
         # False -> O cliente está respondendo a uma pergunta
         interaction = True
-
+        arguments = []
+        frames = list()  # Armazenar os quadros de áudio
         while RUNNING:
 
             try:
-                frames = []  # Armazenar os quadros de áudio
+                frames.clear()
                 if AUDIO_PRESSING:
+                    stream = createStream()
+                    stream.start_stream()
                     while True:
                         data = stream.read(CHUNK)
                         frames.append(data)
-                        if not AUDIO_PRESSING: raise LoopInterrupt("Loop Interrompido")
+                        if not AUDIO_PRESSING: 
+                            stream.stop_stream()
+                            stream.close()
+                            raise LoopInterrupt("Loop Interrompido")
             except LoopInterrupt:
                 salvar_audio(frames, file_path)
 
@@ -588,18 +607,30 @@ class Atendimento(Script):
                     # Transcreve o audio para Texto 
                     success, comando = transcribe(source, vendedor)
 
-                arguments = []
 
                 if not success:
                     continue
                 
                 if interaction:
+                    arguments.clear()
                     # Utiliza o Modelo para classificar 
                     categoria = CLASSIFIER.predict(comando)[0]
 
                     produto = None
                     if categoria == CAT_BUYING or categoria == CAT_REFUNDING:
-                        produto = findProduct(comando)
+                        possiveisProdutos = findProduct(comando, barraca.getProdutos())
+                        print("Produtos encontrados")
+                        for p in possiveisProdutos:
+                            if p: print(p.name)
+                        if len(possiveisProdutos) == 1:
+                            produto = possiveisProdutos[0]
+                        elif len(possiveisProdutos) > 1:
+                            print("Devo perguntar qual das opções é a correta")
+                            # TODO Pergunte quais dos dois é o correto
+                        else:
+                            print("Devo perguntar qual produto você quer")
+                            # TODO Qual produto o player deseja
+                        
                         if produto:
                             arguments.append(produto)
 
@@ -618,7 +649,7 @@ class Atendimento(Script):
                         continue
 
                     interaction = True
-                    if comando.lower() == 'no':
+                    if comando.strip().lower() == 'no':
                         continue
                     
                     ACTIONS[categoria](vendedor, arguments)
@@ -702,9 +733,14 @@ roteiro.addScript(Zoom(camera, 1, 1.5, (15, 90), 50), BoasVindas(), Atendimento(
 roteiro.play()
 
 # Testando findProduct
-texto = 'I would like an fruit, a phone charger! Please!'
-produto = findProduct(texto)
-print(produto)
+texto = 'I would like an fruit, two bananas! Please!'
+resultado = findProduct(texto, barraca.produtos)
+for x in resultado: print("Resultado da busca:", x.name)
+
+# Testando classifyProductName
+# resultado = classifyProductName('banana', barraca.getProdutos())
+# print('Resultado da Classificação:', resultado.name)
+
 
 '''
 print("--------------------")
@@ -788,8 +824,8 @@ except Exception:
 # Encerrar a gravação
 print("Encerrando gravação.")
 
-stream.stop_stream()
-stream.close()
+#stream.stop_stream()
+#stream.close()
 p.terminate()
 
 # Encerra o pygame
