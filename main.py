@@ -146,6 +146,9 @@ def salvar_audio(frames, path):
         print(str(e))
 
 
+
+
+
 # Classe da Janela do Jogo
 class Screen:
     def __init__(self):
@@ -304,7 +307,7 @@ class GameObject(pygame.sprite.Sprite):
 
     def update(self, time):
         pass
-
+ 
 
 # Classe do Background do Jogo
 class Background(GameObject):
@@ -586,10 +589,12 @@ class Atendimento(Script):
                     while True:
                         data = stream.read(CHUNK)
                         frames.append(data)
+
+                        # Se estiver ocorrendo uma captura de áudio e esta for interrompida, 
+                        # a excessão LoopInterrupt é lançada e o programa passa para a parte 
+                        # de processamento e gerenciamento do áudio
                         if not AUDIO_PRESSING: raise LoopInterrupt("Loop Interrompido")
-            
-            # Se estiver ocorrendo uma captura de áudio e esta for interrompida, 
-            # o programa passa para a parte de processamento e gerenciamento do áudio
+
             except LoopInterrupt:
 
                 # Salva os frames em um arquivo de áudio
@@ -599,12 +604,12 @@ class Atendimento(Script):
                 with sr.AudioFile(file_path) as source: 
                     success, comando = transcribe(source, vendedor)
 
-                arguments = []
-
                 # Se a transcrição não for realizada com sucesso uma nova tentativa é
                 # realizada
                 if not success:
                     continue
+
+                arguments = []
 
                 if interaction:
 
@@ -618,12 +623,12 @@ class Atendimento(Script):
                         if produto:
                             arguments.append(produto)
 
-                    # Cria uma string de ordem de pedido
+                    # Cria uma string com a categoria e o produto
                     order_text = f"{categoria}"
                     if produto:
                         order_text += f' {produto.name}'
 
-                    # Pergunta se a ordem de pedido está correta
+                    # Pergunta se a interação indentificada está correta
                     print(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
                     # A próxima etapa da interação vem do vendedor
@@ -633,13 +638,13 @@ class Atendimento(Script):
                     # A próxima etapa da interação vem do usuário
                     interaction = True
 
-                    # Se o programa tiver identificado a ordem de pedido incorretamente
+                    # Se o programa tiver identificado a interação incorretamente,
                     # nenhuma ação é tomada
                     if comando.lower() == 'no':
                         continue
                     
-                    # Se o programa tiver identificado a ordem de pedido corretamente
-                    # a ação função correspondente é acionada
+                    # Se o programa tiver identificado a interação corretamente,
+                    # a função correspondente é acionada
                     ACTIONS[categoria](vendedor, arguments)
 
                 # Tick
