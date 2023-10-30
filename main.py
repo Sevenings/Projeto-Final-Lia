@@ -173,17 +173,6 @@ def salvar_audio(frames, path):
 
 
 
-screen = Screen()
-
-
-
-camera = Camera()
-screen.appendCamera(camera)
-
-
-
-
-background = Background('background.png')
 
 
 # Classe dos Itens
@@ -213,14 +202,25 @@ def loadItens(path):
 
 
 
+# Criado Screen
+screen = Screen()
+
+# Criado Câmera
+camera = Camera()
+screen.appendCamera(camera)
+
+# Criado Background
+background = Background('background.png')
 
 # Classe da Barraca do Jogo
 class Barraca(GameObject):
-    def __init__(self):
+    def __init__(self, image, pos):
         # Carrega os itens e os salva numa variável interna
-        super().__init__('shop.png', (0, 0))
-        self.rect.midbottom = venda_pos
+        super().__init__(image, (0, 0))
+        # Set pos
+        self.rect.midbottom = pos
         self.pos = self.rect.topleft
+        # Carrega Produtos
         self.produtos = loadItens('itens/itens.json')
 
     def draw(self): #Look Here
@@ -238,6 +238,7 @@ class Barraca(GameObject):
 class Vendedor(GameObject):
     def __init__(self, assets_path):
         super().__init__(assets_path, (0, 0))
+        # Tamanho em relação à cena
         self.scene_ratio = 0.69
         self.expr_name = None
         self.expression = None
@@ -581,7 +582,7 @@ class Zoom(Script):
 
 # Criando objetos da Cena
 venda_pos = (background.center()[0], background.size()[1]*0.98)
-barraca = Barraca()
+barraca = Barraca('shop.png', venda_pos)
 vendedor = Vendedor('assets/luks')
 
 screen.addObject(background, vendedor, barraca)
