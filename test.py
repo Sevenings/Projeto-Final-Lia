@@ -14,7 +14,7 @@ altura = 600
 tela = pygame.display.set_mode((largura, altura))
 
 # Defina a cor do retângulo (R, G, B)
-cor_ret = (10, 10, 250, 4)  # Vermelho
+cor_ret = (10, 10, 250, 4)  # Azul
 
 # Defina as coordenadas e dimensões do retângulo (x, y, largura, altura)
 x_ret = 100

@@ -12,6 +12,7 @@ import wave
 import pyaudio
 import pathlib
 import platform
+from ui_api import *
 
 # Identifica o sistema operacional
 sistema = platform.system()
@@ -172,177 +173,17 @@ def salvar_audio(frames, path):
 
 
 
-# Classe da Janela do Jogo
-class Screen:
-    def __init__(self):
-        self.size = (960*5/4, 520*5/4)
-        self.display = pygame.display.set_mode(self.size, flags=pygame.SCALED)   
-        self.cena = []
-        self.camera = None
-        self.background = None
-        self.preCanvas = None
-
-    def blit(self, image, pos):
-        self.preCanvas.blit(image, pos)
-
-    def center(self):
-        return (self.size[0]/2, self.size[1]/2)
-
-    def width(self):
-        return self.size[0]
-
-    def heigth(self):
-        return self.size[1]
-
-    def appendCamera(self, camera):
-        self.camera = camera
-        camera.screen = self
-        camera.size = self.size
-
-    def addObject(self, *objs):
-        for o in objs:
-            self.cena.append(o)
-            o.setScreen(self)
-        return
-
-    def update(self, time):
-        for obj in self.cena:
-            obj.update(time)
-        self.draw()
-
-    def draw(self):
-        self.preCanvas.fill('black')
-        for obj in self.cena:
-            obj.draw()
-        self.drawDisplay()
-
-    def drawDisplay(self):
-        camPos = self.camera.getPos()
-        camCenter = self.camera.center()
-        camSize = self.camera.size
-        zoom = self.camera.zoom
-
-        Ko = camSize[1]/self.background.heigth()
-        image = pygame.transform.smoothscale_by(self.preCanvas, Ko*zoom)
-        pos = (camCenter[0] - zoom*camSize[0]/2, camCenter[1] - zoom*camSize[1]/2)
-        self.display.blit(image, pos)
-
-    def setBackground(self, background):
-        self.background = background
-        self.preCanvas = pygame.Surface(self.background.size())
-
-    def getBackground(self):
-        return self.background
-
-    def screenSetup(self):
-        for obj in self.cena:
-            obj.screenSetup()
-
-
 screen = Screen()
 
 
-# Classe da Câmera do Jogo
-class Camera:
-    def __init__(self):
-        self.size = None
-        self.pos = (15, 0)
-        self.zoom = 1
-        self.screen = None
-
-    def center(self):
-        return (self.size[0]/2 + self.pos[0], self.size[1]/2 + self.pos[1])
-
-    def width(self):
-        return self.size[0]
-
-    def heigth(self):
-        return self.size[1]
-
-    def getPos(self):
-        return self.pos
-
-    def setPos(self, x, y):
-        self.pos = (x, y)
-
-    def setCenter(self, x, y):
-        self.setPos(x - self.size[0]/2, y - self.size[1]/2)
 
 camera = Camera()
 screen.appendCamera(camera)
 
 
 
-# Classe Genérica para todos os objetos do Jogo
-class GameObject(pygame.sprite.Sprite):
-    def __init__(self, image_name, pos):
-        self.loadImagesSetup(image_name)
-        self.pos = pos
-        self.rect = self.image.get_rect()
-        self.rect.topleft = self.pos
-        self.screen = None
 
-    def loadImagesSetup(self, image_name):
-        images_path = 'assets'
-        self.image = pygame.image.load(f'{images_path}/{image_name}')
-
-    def setPos(self, x, y):
-        self.pos = (x, y)
-        self.rect.topleft = self.pos
-
-    def getPos(self):
-        return self.pos
-
-    def setScreen(self, screen):
-        self.screen = screen
-
-    def size(self):
-        return self.image.get_size()
-
-    def getRect(self):
-        return self.rect
-
-    def center(self):
-        return self.getRect().center
-
-    def heigth(self):
-        return self.image.get_height()
-
-    def width(self):
-        return self.image.get_width()
-
-    def draw(self):
-        pass
-
-    def resizeImage(self, percent, ref_image):  
-        k = percent
-        Ko = ref_image.heigth()/self.image.get_size()[1]  # Baseado na Altura
-        self.image = pygame.transform.scale_by(self.image, k*Ko)
-
-    def resizeThisImage(self, input_image, percent, ref_image):
-        k = percent
-        Ko = ref_image.heigth()/input_image.get_size()[1]  # Baseado na Altura
-        output = pygame.transform.scale_by(input_image, k*Ko)
-        return output
-
-    def screenSetup(self):
-        pass
-
-    def update(self, time):
-        pass
- 
-
-# Classe do Background do Jogo
-class Background(GameObject):
-    def __init__(self):
-        super().__init__('background.png', (0, 0))
-        #self.image = pygame.transform.scale(self.image, screen.size)
-
-    def draw(self):
-        self.screen.blit(self.image, self.getPos())
-
-
-background = Background()
+background = Background('background.png')
 
 
 # Classe dos Itens
@@ -553,8 +394,8 @@ class BoasVindas(Script):
         self.limite = 1
 
     def action(self, time, *args):
-        print("Seja bem vindo à nossa Loja!")
-        print("Temos dos mais diversos produtos!")
+        print("Hello! Be Welcome to my store!")
+        print("I have a huge diversity of products!")
 
 
 # Excessão de Interrupção de loop
@@ -776,6 +617,13 @@ AUDIO_PRESSING = False # Representa o estado da captura de áudio
 RUNNING = True 
 TIME = 0
 
+
+# Teste TextBox
+caixa_de_texto = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (255, 0, 0, 255), "Testando Caixa de Texto")
+
+#texto_teste = 
+
+
 # Loop de gerenciamento de eventos
 try:
     while RUNNING:
@@ -823,6 +671,9 @@ try:
         screen.display.fill('black')
 
         screen.update(TIME)
+        caixa_de_texto.draw_rect_alpha(screen.getDisplay())
+        caixa_de_texto.render_text(screen.getDisplay())
+
 
         pygame.display.flip()
 
