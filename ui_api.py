@@ -12,6 +12,7 @@ class Screen:
         self.size = (960*5/4, 520*5/4)
         self.display = pygame.display.set_mode(self.size, flags=pygame.SCALED)   
         self.cena = []
+        self.ui = []
         self.camera = None
         self.background = None
         self.preCanvas = None
@@ -45,9 +46,18 @@ class Screen:
             o.setScreen(self)
         return
 
+    def addUIObject(self, *objs):
+        # Adiciona um elemento de UI à Screen
+        for o in objs:
+            self.ui.append(o)
+            o.setScreen(self)
+        return
+
     def update(self, time):
         # Update em todos os objetos
         for obj in self.cena:
+            obj.update(time)
+        for obj in self.ui:
             obj.update(time)
         self.draw()
 
@@ -58,6 +68,7 @@ class Screen:
         for obj in self.cena:
             obj.draw()
         self.drawDisplay()
+        self.drawUI()
 
     def drawDisplay(self):
         # Parte da Pipeline de draw
@@ -71,6 +82,11 @@ class Screen:
         image = pygame.transform.smoothscale_by(self.preCanvas, Ko*zoom)
         pos = (camCenter[0] - zoom*camSize[0]/2, camCenter[1] - zoom*camSize[1]/2)
         self.display.blit(image, pos)
+
+    def drawUI(self):
+        for obj in self.ui:
+            obj.draw(self.display)
+            
 
     def setBackground(self, background):
         # Set Background
@@ -201,7 +217,7 @@ class TextBox:
         self.rgba = rgba
 
         # Texto
-        self.text = text
+        self.textBuffer = []
         self.text_position = (0,0)
         self.font = pygame.font.Font(None, 36)
         self.font_color = (0, 0, 0)
@@ -212,31 +228,39 @@ class TextBox:
         # largura das bordas, valor padrão: 10 (top, left, bottom, right)
         self.borders = [50, 20, 10, 10]
 
-    def set_text(self, text):
-        self.text = text
+    def addText(self, *textList):
+        for text in textList:
+            self.textBuffer.append(text)
 
-    def set_font_size(self, size):
+    def getText(self):
+        # Retorna o Texto Atual do Buffer de Texto
+        if len(self.textBuffer) > 0:
+            return self.textBuffer[0]
+        else:
+            return ''
+
+    def setFontSize(self, size):
         self.font.size = size
 
-    def set_font(self, font):
+    def setFont(self, font):
         try:
             self.font = pygame.font.Font(font, self.font.size)
         except e:
             self.font = pygame.font.Font(None, self.font.size)
 
-    def set_font_color(self, color):
+    def setFontColor(self, color):
         self.font_color = color
     
-    def set_text_position(self, pos):
+    def setTextPosition(self, pos):
         self.text_position = pos
 
-    def render_text(self, surface):
+    def renderText(self, surface):
         shift = [self.borders[0] + self.text_position[0], self.borders[1] + self.text_position[1]]
 
         line_height = self.font.get_linesize()
 
         # Divide o texto em linhas
-        lines = self.text.split('\n')
+        lines = self.getText().split('\n')
 
         # Renderiza o texto em uma superfície
         
@@ -249,7 +273,7 @@ class TextBox:
 
         surface.blit(self.surface, self.rect)
 
-    def draw_rect_alpha(self, surface):
+    def drawRectAlpha(self, surface):
         # Separando as componenetes do código de cor
         rgb = self.rgba[:3]
         alpha = self.rgba[3]
@@ -259,4 +283,23 @@ class TextBox:
         pygame.draw.rect(self.surface, rgb, self.surface.get_rect())
         surface.blit(self.surface, self.rect)
 
+    def draw(self, screen):
+        self.drawRectAlpha(screen)
+        self.renderText(screen)
+
+    def setScreen(self, screen):
+        self.screen = screen
+
+    def screenSetup(self):
+        pass
+
+    def update(self, time):
+        pass
+
+    def interact(self):
+        # Método para quando este elemento é interagido
+        if len(self.textBuffer) > 0:
+            self.textBuffer.pop(0)
+
+        
 

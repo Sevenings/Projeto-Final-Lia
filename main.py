@@ -584,8 +584,18 @@ class Zoom(Script):
 venda_pos = (background.center()[0], background.size()[1]*0.98)
 barraca = Barraca('shop.png', venda_pos)
 vendedor = Vendedor('assets/luks')
+# Teste caixa de texto
+caixa_de_texto = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (255, 0, 0, 255), "Testando Caixa de Texto")
 
-screen.addObject(background, vendedor, barraca)
+# Teste de Textos:
+caixa_de_texto.addText('O Amanhã Não Cala',
+                        'Coração que não bate morde',
+                        'O Segredo da Vida é Ser',
+                        'A simplicidade da vida está nas equações de 1o Grau')
+
+
+screen.addObject(background, vendedor, barraca) 
+screen.addUIObject(caixa_de_texto)
 
 screen.setBackground(background)
 screen.screenSetup()
@@ -619,10 +629,10 @@ RUNNING = True
 TIME = 0
 
 
-# Teste TextBox
-caixa_de_texto = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (255, 0, 0, 255), "Testando Caixa de Texto")
 
-#texto_teste = 
+selected = 0
+
+
 
 
 # Loop de gerenciamento de eventos
@@ -643,37 +653,16 @@ try:
                     if not AUDIO_PRESSING:
                         print("not", end=" ")
                     print("Listening!")
-
-                '''
-                if event.key == pygame.K_a:
-                    pos = camera.getPos()
-                    camera.setPos(pos[0]-10, pos[1])
-                elif event.key == pygame.K_d:
-                    pos = camera.getPos()
-                    camera.setPos(pos[0]+10, pos[1])
-                elif event.key == pygame.K_w:
-                    pos = camera.getPos()
-                    camera.setPos(pos[0], pos[1]-10)
-                elif event.key == pygame.K_s:
-                    pos = camera.getPos()
-                    camera.setPos(pos[0]-10, pos[1]+10)
-                print(camera.getPos())
-                '''
-            '''
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_v:
-                    AUDIO_PRESSING = False
-                    print("Stopped.")
-            '''
-
+                elif event.key == pygame.K_f:
+                    caixa_de_texto.interact()
 
         roteiro.update()
 
         screen.display.fill('black')
 
         screen.update(TIME)
-        caixa_de_texto.draw_rect_alpha(screen.getDisplay())
-        caixa_de_texto.render_text(screen.getDisplay())
+        # caixa_de_texto.draw_rect_alpha(screen.getDisplay())
+        # caixa_de_texto.render_text(screen.getDisplay())
 
 
         pygame.display.flip()
