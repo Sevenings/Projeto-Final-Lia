@@ -38,7 +38,13 @@ pygame.init()
 clock = pygame.time.Clock()
 FPS = 60
 
-#FONT = pygame.font.Font(size=24)
+
+# Excessão de Interrupção de loop
+class LoopInterrupt(Exception):
+    def __init__(self, mensagem):
+        self.mensagem = mensagem
+        super().__init__(self.mensagem)
+
 
 LANG = 'en'
 
@@ -57,35 +63,34 @@ def listar(*args):
 
 def comprar(*args): # (vendedor, produto)
     vendedor = args[0]
-    threading.Thread(target=vendedor.getPaidExpression).start()
 
     if len(args[1]) == 0:
-        print("Não entendi qual produto você quer.")
+        say("Didn't understand which product you'd like")
         return
 
     produto = args[1][0]
 
     global MONEY
     if produto.price > MONEY:
-        print("Hey! You don't have enought money!")
-        sleep(1)
-        print(f"You only have {MONEY} coins.")
+        say("Hey! You don't have enought money!", 
+            f"You only have {MONEY} coins.")
         return
     MONEY -= produto.price
     INVENTORY.append(produto)
-    print(f"Alright! The {produto.name} is all yours!")
+
+    threading.Thread(target=vendedor.getPaidExpression).start()
+    say(f"Alright! The {produto.name} is all yours!",
+         'Have a good day')
     return
 
 
 def devolver(*args):
     threading.Thread(target=vendedor.refundExpression).start()
-    print("You were refunded!")
+    say("You were refunded!", "I'm sorry")
 
 
 def bom_dia(*args):
-    print("Hello! Be welcome to my store!")
-    sleep(1)
-    print("How can I help you?")
+    say('Hello!', 'Be welcome to my store!','How can I help you?')
 
 def tchau(*args):
     global RUNNING
@@ -168,6 +173,63 @@ def salvar_audio(frames, path):
             print(f"Áudio gravado salvo em {path}")
     except Exception as e:
         print(str(e))
+
+
+
+
+
+# Função Thread para Entrada de Áudio | 06-11-23 | 16:22
+
+class EntradaAudio:
+    def __init__(self):
+        self.message = None
+        self.has_new_message = False
+
+    def start(self):
+        threading.Thread(target=self.atendimento, args=(self.vendedor,)).start()
+
+    def audio_input(self):
+        global RUNNING, AUDIO_PRESSING, self.message, self.has_new_message
+        frames = list() # Armazenar os quadros de áudio
+        while RUNNING:
+            try:
+                frames.clear()
+                if AUDIO_PRESSING:
+                    stream = createStream()
+                    stream.start_stream()
+                    while True:
+                        data = stream.read(CHUNK)
+                        frames.append(data)
+                        # Se estiver ocorrendo uma captura de áudio e esta for interrompida, 
+                        # a excessão LoopInterrupt é lançada e o programa passa para a parte 
+                        # de processamento e gerenciamento do áudio
+                        if not AUDIO_PRESSING:
+                            stream.stop_stream()
+                            stream.close()
+                            raise LoopInterrupt("Loop Interrompido")
+            except LoopInterrupt:
+                # Salva os frames em um arquivo de áudio
+                salvar_audio(frames, file_path)
+
+                # Transcreve o áudio para Texto
+                with sr.AudioFile(file_path) as source: 
+                    success, comando = transcribe(source, vendedor)
+
+                # Se a transcrição não for realizada com sucesso uma nova tentativa é
+                # realizada
+                if not success:
+                    continue
+
+                self.message = comando
+                self.has_new_message = True
+
+    def hasMessage(self):
+        return self.has_new_message
+
+    def readMessage(self):
+        self.has_new_message = False
+        return self.message
+            
 
 
 
@@ -336,13 +398,19 @@ class Script:
     def action(self, time, *args):
         pass
 
+    def setLimite(self, l):
+        self.limite = l
+
+    def getLimite(self):
+        return self.limite
+
     def finish(self):
         self.roteiro.next()
 
 
 
-# Classe que guarda uma lista de Scripts e os "toca"
-# numa ordem lógica
+# Classe que guarda uma lista de Scripts
+# e os "toca" numa ordem lógica
 class Roteiro:
     def __init__(self):
         self.roteiro = []
@@ -388,22 +456,30 @@ class Roteiro:
             return
         self.time += 1
 
+# Script
+class AguardandoInteracao(Script):
+    def setup(self):
+        self.interagiu = False
+
+    def action(self, time, *args):
+        if AUDIO_PRESSING:
+            self.interagiu = True
+        if self.interagiu:
+            self.finish()
+
+
+        
+
 
 # Script 
 class BoasVindas(Script):
     def setup(self):
-        self.limite = 1
+        self.setLimite(1)
 
     def action(self, time, *args):
-        print("Hello! Be Welcome to my store!")
-        print("I have a huge diversity of products!")
+        say("Hello! Be Welcome to my store!", "I have a huge variety of products!")
 
 
-# Excessão de Interrupção de loop
-class LoopInterrupt(Exception):
-    def __init__(self, mensagem):
-        self.mensagem = mensagem
-        super().__init__(self.mensagem)
 
 # Caminho para o arquivo de audio temporário
 directory = os.path.dirname(os.path.abspath(__file__))
@@ -423,7 +499,7 @@ class Atendimento(Script):
             return
         threading.Thread(target=self.atendimento, args=(self.vendedor,)).start()
 
-    def atendimento(self, vendedor):
+    def atendimento(self, vendedor):  # Feito para ser executado em Thread
         global RUNNING, LANG, AUDIO_PRESSING
 
         # A variável interaction indica o modo de interação
@@ -490,6 +566,8 @@ class Atendimento(Script):
                         
                         if produto:
                             arguments.append(produto)
+                        print(arguments)
+
 
                     # Cria uma string com a categoria e o produto
                     order_text = f"{categoria}"
@@ -497,7 +575,7 @@ class Atendimento(Script):
                         order_text += f' {produto.name}'
 
                     # Pergunta se a interação indentificada está correta
-                    print(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
+                    say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
                     # A próxima etapa da interação vem do vendedor
                     interaction = False
@@ -540,6 +618,8 @@ def transcribe(source, vendedor):
     except sr.exceptions.UnknownValueError:
         print("Sorry, I didn't understand")
         return False, None
+    finally:
+        vendedor.setIdleExpression()
 
 
 
@@ -573,7 +653,18 @@ class Zoom(Script):
 
         self.finish()
 
-        
+
+
+def say(*text):
+    textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (0, 0, 255, 255))
+    textbox.setFontColor((255, 255, 255))
+    for t in text:
+        textbox.addText(t)
+    screen.addUIObject(textbox)
+
+def interact_text():
+    for ui in screen.ui:
+        ui.interact()
 
 
 
@@ -584,24 +675,14 @@ class Zoom(Script):
 venda_pos = (background.center()[0], background.size()[1]*0.98)
 barraca = Barraca('shop.png', venda_pos)
 vendedor = Vendedor('assets/luks')
-# Teste caixa de texto
-caixa_de_texto = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (255, 0, 0, 255), "Testando Caixa de Texto")
-
-# Teste de Textos:
-caixa_de_texto.addText('O Amanhã Não Cala',
-                        'Coração que não bate morde',
-                        'O Segredo da Vida é Ser',
-                        'A simplicidade da vida está nas equações de 1o Grau')
-
 
 screen.addObject(background, vendedor, barraca) 
-screen.addUIObject(caixa_de_texto)
 
 screen.setBackground(background)
 screen.screenSetup()
 
 roteiro = Roteiro()
-roteiro.addScript(Zoom(camera, 1, 1.5, (15, 90), 50), BoasVindas(), Atendimento(vendedor))
+roteiro.addScript(AguardandoInteracao(), Zoom(camera, 1, 1.5, (15, 90), 50), BoasVindas(), Atendimento(vendedor))
 roteiro.play()
 
 # Testando findProduct
@@ -654,7 +735,7 @@ try:
                         print("not", end=" ")
                     print("Listening!")
                 elif event.key == pygame.K_f:
-                    caixa_de_texto.interact()
+                    interact_text()
 
         roteiro.update()
 

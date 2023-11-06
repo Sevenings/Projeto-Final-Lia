@@ -208,7 +208,7 @@ class Background(GameObject):
 
 # Classe de elementos da barra de texto
 class TextBox:
-    def __init__(self, x_pos, y_pos, width, height, rgba, text):
+    def __init__(self, x_pos, y_pos, width, height, rgba):
         # Screen
         self.screen = None
 
@@ -298,8 +298,13 @@ class TextBox:
 
     def interact(self):
         # Método para quando este elemento é interagido
-        if len(self.textBuffer) > 0:
+        if len(self.textBuffer) > 1:
             self.textBuffer.pop(0)
+        else:
+            self.kill()
+
+    def kill(self):
+        self.screen.ui.remove(self)
 
         
 
