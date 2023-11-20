@@ -10,7 +10,7 @@ PATH_ASSETS = 'assets'
 class Screen:
     def __init__(self):
         self.size = (960*5/4, 520*5/4)
-        self.display = pygame.display.set_mode(self.size, flags=pygame.SCALED)   
+        self.display = pygame.display.set_mode(self.size, flags=pygame.SCALED|pygame.RESIZABLE)   
         self.cena = []
         self.ui = []
         self.camera = None
@@ -159,6 +159,9 @@ class GameObject(pygame.sprite.Sprite):
     def setScreen(self, screen):
         self.screen = screen
 
+    def getScreen(self):
+        return self.screen
+
     def size(self):
         return self.image.get_size()
 
@@ -208,7 +211,7 @@ class Background(GameObject):
 
 # Classe de elementos da barra de texto
 class TextBox:
-    def __init__(self, x_pos, y_pos, width, height, rgba):
+    def __init__(self, x_pos, y_pos, width, height, rgba, icon=None):
         # Screen
         self.screen = None
 
@@ -227,6 +230,9 @@ class TextBox:
 
         # largura das bordas, valor padrão: 10 (top, left, bottom, right)
         self.borders = [50, 20, 10, 10]
+
+        # Icone
+        self.icon = icon
 
     def addText(self, *textList):
         for text in textList:

@@ -178,18 +178,16 @@ def salvar_audio(frames, path):
 
 
 
-# Função Thread para Entrada de Áudio | 06-11-23 | 16:22
-
+# Classe Entrada de Áudio | 06-11-23 | 16:22
+# Classe que mantem um Thread que captura o Audio
+MESSAGE = None
+HAS_NEW_MESSAGE = False
 class EntradaAudio:
-    def __init__(self):
-        self.message = None
-        self.has_new_message = False
-
     def start(self):
-        threading.Thread(target=self.atendimento, args=(self.vendedor,)).start()
+        threading.Thread(target=self.audio_input, args=()).start()
 
     def audio_input(self):
-        global RUNNING, AUDIO_PRESSING, self.message, self.has_new_message
+        global RUNNING, AUDIO_PRESSING, MESSAGE, HAS_NEW_MESSAGE
         frames = list() # Armazenar os quadros de áudio
         while RUNNING:
             try:
@@ -220,15 +218,19 @@ class EntradaAudio:
                 if not success:
                     continue
 
-                self.message = comando
-                self.has_new_message = True
+                MESSAGE = comando
+                HAS_NEW_MESSAGE = True
 
     def hasMessage(self):
-        return self.has_new_message
+        global HAS_NEW_MESSAGE
+        return HAS_NEW_MESSAGE
 
     def readMessage(self):
-        self.has_new_message = False
-        return self.message
+        global HAS_NEW_MESSAGE, MESSAGE
+        HAS_NEW_MESSAGE = False
+        return MESSAGE
+
+ENTRADA_AUDIO = EntradaAudio()
             
 
 
@@ -373,6 +375,22 @@ class Vendedor(GameObject):
     def update(self, time):
         if time%40 == 0:
             threading.Thread(target=self.piscar).start()
+
+    def say(self, *text):
+        texto = []
+        for t in text:
+            if type(t).__name__ == 'list' or type(t).__name__ == 'tuple':
+                texto.extend(t)
+            else:
+                texto.append(t)
+
+        screen = self.getScreen()
+        textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (0, 0, 255, 255))
+        textbox.setFontColor((255, 255, 255))
+        for t in texto:
+            textbox.addText(t)
+        screen.addUIObject(textbox)
+
             
 
 
@@ -458,13 +476,14 @@ class Roteiro:
 
 # Script
 class AguardandoInteracao(Script):
-    def setup(self):
-        self.interagiu = False
-
     def action(self, time, *args):
-        if AUDIO_PRESSING:
-            self.interagiu = True
-        if self.interagiu:
+        if not ENTRADA_AUDIO.hasMessage():
+            return
+        fala = ENTRADA_AUDIO.readMessage()
+
+        categoria = CLASSIFIER.predict(fala)[0]
+
+        if categoria == CAT_HELLO or categoria == CAT_LISTAGEM:
             self.finish()
 
 
@@ -493,109 +512,79 @@ class Atendimento(Script):
     def __init__(self, vendedor):
         super().__init__()
         self.vendedor = vendedor
-
-    def action(self, time, *args):
-        if time > 0:
-            return
-        threading.Thread(target=self.atendimento, args=(self.vendedor,)).start()
-
-    def atendimento(self, vendedor):  # Feito para ser executado em Thread
-        global RUNNING, LANG, AUDIO_PRESSING
-
         # A variável interaction indica o modo de interação
         # True -> O cliente tomou a iniciativa de interação
         # False -> O cliente está respondendo a uma pergunta
-        interaction = True
-        arguments = []
-        frames = list()  # Armazenar os quadros de áudio
-        while RUNNING:
+        self.interaction = True
+        self.arguments = []
+        self.categoria = None
 
-            try:
-                frames.clear()
-                if AUDIO_PRESSING:
-                    stream = createStream()
-                    stream.start_stream()
-                    while True:
-                        data = stream.read(CHUNK)
-                        frames.append(data)
+    def action(self, time, *args):
+        self.atendimento(self.vendedor)
 
-                        # Se estiver ocorrendo uma captura de áudio e esta for interrompida, 
-                        # a excessão LoopInterrupt é lançada e o programa passa para a parte 
-                        # de processamento e gerenciamento do áudio
+    def atendimento(self, vendedor):  # Feito para ser executado em Thread
+        if not ENTRADA_AUDIO.hasMessage():
+            return
+        comando = ENTRADA_AUDIO.readMessage()
 
-                        if not AUDIO_PRESSING: 
-                            stream.stop_stream()
-                            stream.close()
-                            raise LoopInterrupt("Loop Interrompido")
-            except LoopInterrupt:
+        if self.interaction:
+            self.arguments.clear()
+            # Utiliza o Modelo para classificar 
+            self.categoria = CLASSIFIER.predict(comando)[0]
 
-                # Salva os frames em um arquivo de áudio
-                salvar_audio(frames, file_path)
-
-                # Transcreve o áudio para Texto
-                with sr.AudioFile(file_path) as source: 
-                    success, comando = transcribe(source, vendedor)
-
-                # Se a transcrição não for realizada com sucesso uma nova tentativa é
-                # realizada
-                if not success:
-                    continue
-
-                arguments = []
-
-                if interaction:
-                    arguments.clear()
-                    # Utiliza o Modelo para classificar 
-                    categoria = CLASSIFIER.predict(comando)[0]
-
-                    # Identifica o produto pedido e o coloca na lista de argumentos
-                    produto = None
-                    if categoria == CAT_BUYING or categoria == CAT_REFUNDING:
-                        possiveisProdutos = findProduct(comando, barraca.getProdutos())
-                        print("Produtos encontrados")
-                        for p in possiveisProdutos:
-                            if p: print(p.name)
-                        if len(possiveisProdutos) == 1:
-                            produto = possiveisProdutos[0]
-                        elif len(possiveisProdutos) > 1:
-                            print("Devo perguntar qual das opções é a correta")
-                            # TODO Pergunte quais dos dois é o correto
-                        else:
-                            print("Devo perguntar qual produto você quer")
-                            # TODO Qual produto o player deseja
-                        
-                        if produto:
-                            arguments.append(produto)
-                        print(arguments)
-
-
-                    # Cria uma string com a categoria e o produto
-                    order_text = f"{categoria}"
-                    if produto:
-                        order_text += f' {produto.name}'
-
-                    # Pergunta se a interação indentificada está correta
-                    say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
-
-                    # A próxima etapa da interação vem do vendedor
-                    interaction = False
+            # Para as categorias de BUYING e REFUNDING
+            # Que necessitam de um Produto como Argumento 
+            # Identifica o produto pedido e o coloca na lista de argumentos
+            produto = None
+            if self.categoria == CAT_BUYING or self.categoria == CAT_REFUNDING:
+                possiveisProdutos = findProduct(comando, barraca.getProdutos())
+                print("Produtos encontrados")
+                for p in possiveisProdutos:
+                    if p: print(p.name)
+                if len(possiveisProdutos) == 1:
+                    produto = possiveisProdutos[0]
+                elif len(possiveisProdutos) > 1:
+                    print("Devo perguntar qual das opções é a correta")
+                    # TODO Pergunte quais dos dois é o correto
                 else:
+                    print("Devo perguntar qual produto você quer")
+                    # TODO Qual produto o player deseja
+                
+                if produto:
+                    self.arguments.append(produto)
+                print(self.arguments)
 
-                    # A próxima etapa da interação vem do usuário
-                    interaction = True
 
-                    # Se o programa tiver identificado a interação incorretamente,
-                    # nenhuma ação é tomada
-                    if comando.strip().lower() == 'no':
-                        continue
-                    
-                    # Se o programa tiver identificado a interação corretamente,
-                    # a função correspondente é acionada
-                    ACTIONS[categoria](vendedor, arguments)
+            # Cria uma string com a categoria e o produto
+            order_text = f"{self.categoria}"
+            if produto:
+                order_text += f' {produto.name}'
 
-                # Tick
-                sleep(1/60)
-        self.finish()
+            # Pergunta se a interação indentificada está correta
+            say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
+
+            # A próxima etapa da interação vem do vendedor
+            self.interaction = False
+        else:
+
+            # Se o programa tiver identificado a interação incorretamente,
+            # nenhuma ação é tomada
+            if comando.strip().lower() == 'no':
+                return
+            
+            # A próxima etapa da interação vem do usuário
+            self.interaction = True
+
+            # Se o programa tiver identificado a interação corretamente,
+            # a função correspondente é acionada
+            ACTIONS[self.categoria](vendedor, self.arguments)
+
+        # Tick
+        sleep(1/60)
+        print("Pre Finished")
+        if not RUNNING:
+            self.finish()
+            print("Pos Finished")
 
 
 
@@ -618,6 +607,8 @@ def transcribe(source, vendedor):
     except sr.exceptions.UnknownValueError:
         print("Sorry, I didn't understand")
         return False, None
+    except Exception as e:
+        print(str(e))
     finally:
         vendedor.setIdleExpression()
 
@@ -656,11 +647,8 @@ class Zoom(Script):
 
 
 def say(*text):
-    textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (0, 0, 255, 255))
-    textbox.setFontColor((255, 255, 255))
-    for t in text:
-        textbox.addText(t)
-    screen.addUIObject(textbox)
+    meu_vendedor = vendedor
+    meu_vendedor.say(text)
 
 def interact_text():
     for ui in screen.ui:
@@ -683,6 +671,7 @@ screen.screenSetup()
 
 roteiro = Roteiro()
 roteiro.addScript(AguardandoInteracao(), Zoom(camera, 1, 1.5, (15, 90), 50), BoasVindas(), Atendimento(vendedor))
+# roteiro.addScript(Zoom(camera, 1, 1.5, (15, 90), 50), BoasVindas(), Atendimento(vendedor))
 roteiro.play()
 
 # Testando findProduct
@@ -716,6 +705,7 @@ selected = 0
 
 
 
+ENTRADA_AUDIO.start()
 # Loop de gerenciamento de eventos
 try:
     while RUNNING:
