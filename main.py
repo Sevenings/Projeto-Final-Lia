@@ -663,6 +663,22 @@ def interact_text():
     for ui in screen.ui:
         ui.interact()
 
+# Função que apresenta a fala do jogador na tela
+def display_speech(*text):
+    texto = []
+    for t in text:
+        if type(t).__name__ == 'list' or type(t).__name__ == 'tuple':
+            texto.extend(t)
+        else:
+            texto.append(t)
+
+    screen = self.getScreen()
+    textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (255, 255, 255, 128))
+    textbox.setFontColor((255, 255, 255))
+    for t in texto:
+        textbox.addText(t)
+    screen.addUIObject(textbox)
+
 
 
 

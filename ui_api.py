@@ -211,7 +211,7 @@ class Background(GameObject):
 
 # Classe de elementos da barra de texto
 class TextBox:
-    def __init__(self, x_pos, y_pos, width, height, rgba, icon=None):
+    def __init__(self, x_pos, y_pos, width, height, rgba, tag=None, icon=None):
         # Screen
         self.screen = None
 
@@ -233,6 +233,9 @@ class TextBox:
 
         # Icone
         self.icon = icon
+
+        # Tag com a função que a TextBox possui na interface ( DIALOGO, 
+        self.tag = tag
 
     def addText(self, *textList):
         for text in textList:
