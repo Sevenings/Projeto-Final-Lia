@@ -570,7 +570,17 @@ class Atendimento(Script):
                 order_text += f' {produto.name}'
 
             # Pergunta se a interação indentificada está correta
-            say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
+            if(order_text == CAT_BUYING):
+                say(f"Wanna {order_text}?")
+            elif(order_text == CAT_LISTAGEM):
+                say("Hey, curious about what I got for sale?")
+            elif(order_text == CAT_REFUNDING):
+                say("Want your money back?")
+            elif(order_text == CAT_GOODBYE):
+                say("Oh, are you going already?")
+            elif(order_text == CAT_HELLO):
+                say("Talking to me?")
+            #say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
             # A próxima etapa da interação vem do vendedor
             self.interaction = False
