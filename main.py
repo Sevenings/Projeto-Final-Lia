@@ -25,7 +25,7 @@ if sistema == "Windows":
 # Caminho para o modelo
 directory = os.path.dirname(os.path.abspath(__file__))
 subDir = "Modelo_NLP_Lia"
-arquivo = "colab_complete_model_vs1.0"
+arquivo = "colab_complete_model_vs1_0.pth"
 
 model_path = Path(os.path.join(os.path.join(directory, subDir), arquivo))
 
@@ -561,7 +561,17 @@ class Atendimento(Script):
                 order_text += f' {produto.name}'
 
             # Pergunta se a interação indentificada está correta
-            say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
+            if(order_text == CAT_BUYING):
+                say(f"Wanna {order_text}?")
+            elif(order_text == CAT_LISTAGEM):
+                say("Hey, curious about what I got for sale?")
+            elif(order_text == CAT_REFUNDING):
+                say("Want your money back?")
+            elif(order_text == CAT_GOODBYE):
+                say("Oh, are you going already?")
+            elif(order_text == CAT_HELLO):
+                say("Talking to me?")
+            #say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
             # A próxima etapa da interação vem do vendedor
             self.interaction = False
