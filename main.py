@@ -25,7 +25,7 @@ if sistema == "Windows":
 # Caminho para o modelo
 directory = os.path.dirname(os.path.abspath(__file__))
 subDir = "Modelo_NLP_Lia"
-arquivo = "colab_complete_model_vs1.0"
+arquivo = "colab_complete_model_vs1_0.pth"
 
 model_path = Path(os.path.join(os.path.join(directory, subDir), arquivo))
 
@@ -55,17 +55,26 @@ INVENTORY = []
 # Todas as ações que o feirante executa
 
 def listar(*args):
-    print("Here! There are all my products:")
-    print("Name \t Type \t Price")
+    i = 1
+    n = len(barraca.produtos)
+    texto_produtos = ''
     for produto in barraca.produtos:
-        print(f"{produto.name} \t {produto.type} \t {produto.price}")
+        texto_produtos += f'{produto.name}'
+        if i < n-1:
+            texto_produtos += ', '
+        elif i == n-1:
+            texto_produtos += ' and '
+        else:
+            texto_produtos += '.'
+        i += 1
+    say("In my store I sell:", texto_produtos)
 
 
 def comprar(*args): # (vendedor, produto)
     vendedor = args[0]
 
     if len(args[1]) == 0:
-        say("Didn't understand which product you'd like")
+        say("Sorry but I didn't understand which product you'd like")
         return
 
     produto = args[1][0]
@@ -719,13 +728,13 @@ try:
                     else:
                         os.system('clear')
                 if event.key == pygame.K_q:
-                    AUDIO_PRESSING = True if not AUDIO_PRESSING else False
-                    
-                    if not AUDIO_PRESSING:
-                        print("not", end=" ")
-                    print("Listening!")
-                elif event.key == pygame.K_f:
-                    interact_text()
+                    if screen.hasDialog and AUDIO_PRESSING == False:
+                        interact_text()
+                    else:
+                        AUDIO_PRESSING = True if not AUDIO_PRESSING else False
+                        if not AUDIO_PRESSING:
+                            print("not", end=" ")
+                        print("Listening!")
 
         roteiro.update()
 

@@ -16,6 +16,7 @@ class Screen:
         self.camera = None
         self.background = None
         self.preCanvas = None
+        self.hasDialog = False
 
     def blit(self, image, pos):
         # Desenha uma imagem na tela
@@ -86,7 +87,6 @@ class Screen:
     def drawUI(self):
         for obj in self.ui:
             obj.draw(self.display)
-            
 
     def setBackground(self, background):
         # Set Background
@@ -295,6 +295,7 @@ class TextBox:
 
     def setScreen(self, screen):
         self.screen = screen
+        self.screen.hasDialog = True
 
     def screenSetup(self):
         pass
@@ -310,6 +311,7 @@ class TextBox:
             self.kill()
 
     def kill(self):
+        self.screen.hasDialog = False
         self.screen.ui.remove(self)
 
         
