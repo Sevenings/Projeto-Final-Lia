@@ -67,7 +67,7 @@ def listar(*args):
         else:
             texto_produtos += '.'
         i += 1
-    say("In my store I sell:", texto_produtos)
+    say("In my store I sell:", texto_produtos, "Are you interested in any of these?")
 
 
 def comprar(*args): # (vendedor, produto)
@@ -99,7 +99,7 @@ def devolver(*args):
 
 
 def bom_dia(*args):
-    say('Hello!', 'Be welcome to my store!','How can I help you?')
+    say('Hello!', 'Be welcome to my store!',"Why don't you ask me about my products?")
 
 def tchau(*args):
     global RUNNING
@@ -394,7 +394,7 @@ class Vendedor(GameObject):
                 texto.append(t)
 
         screen = self.getScreen()
-        textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (0, 0, 255, 255))
+        textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (0, 0, 220, 255), tag='CAIXA_DE_DIALOGO')
         textbox.setFontColor((255, 255, 255))
         for t in texto:
             textbox.addText(t)
@@ -505,7 +505,7 @@ class BoasVindas(Script):
         self.setLimite(1)
 
     def action(self, time, *args):
-        say("Hello! Be Welcome to my store!", "I have a huge variety of products!")
+        say("Hello! Be Welcome to my store!", "I have a huge variety of products!", "Why don't you ask me about my products?", "Try asking 'Which products do you have for sale?'")
 
 
 
@@ -570,15 +570,15 @@ class Atendimento(Script):
                 order_text += f' {produto.name}'
 
             # Pergunta se a interação indentificada está correta
-            if(order_text == CAT_BUYING):
+            if(self.categoria == CAT_BUYING):
                 say(f"Wanna {order_text}?")
-            elif(order_text == CAT_LISTAGEM):
+            elif(self.categoria == CAT_LISTAGEM):
                 say("Hey, curious about what I got for sale?")
-            elif(order_text == CAT_REFUNDING):
+            elif(self.categoria == CAT_REFUNDING):
                 say("Want your money back?")
-            elif(order_text == CAT_GOODBYE):
+            elif(self.categoria == CAT_GOODBYE):
                 say("Oh, are you going already?")
-            elif(order_text == CAT_HELLO):
+            elif(self.categoria == CAT_HELLO):
                 say("Talking to me?")
             #say(f"The order is '{order_text}', is that correct? [yes/no]") # TODO  Trocar por IA ou outra coisa
 
@@ -621,10 +621,11 @@ def transcribe(source, vendedor):
     vendedor.selectExpression('thinker')
     try:
         comando = r.recognize_google(audio, language=LANG)
+        display_speech(comando)
         print(f"I've heard: \"{comando}\"")
         return True, comando
     except sr.exceptions.UnknownValueError:
-        print("Sorry, I didn't understand")
+        say("Sorry, I didn't understand")
         return False, None
     except Exception as e:
         print(str(e))
@@ -673,6 +674,26 @@ def interact_text():
     for ui in screen.ui:
         ui.interact()
 
+
+class SpeechBox(TextBox):
+    def __init__(self, duration):
+        super().__init__(10, 10, screen.width()-20, 60, (0, 0, 0, 225))
+        self.setFontColor((255, 255, 255))
+
+        self.born_time = None
+        self.can_interact = False
+        self.life_duration = duration
+
+    def interact(self):
+        return False
+
+    def update(self, time):
+        if self.born_time == None:
+            self.born_time = time
+        if time > self.born_time + self.life_duration:
+            self.kill()
+
+
 # Função que apresenta a fala do jogador na tela
 def display_speech(*text):
     texto = []
@@ -682,14 +703,10 @@ def display_speech(*text):
         else:
             texto.append(t)
 
-    screen = self.getScreen()
-    textbox = TextBox(10, screen.heigth()-100-10, screen.width()-20, 100, (255, 255, 255, 128))
-    textbox.setFontColor((255, 255, 255))
+    textbox = SpeechBox(15)
     for t in texto:
         textbox.addText(t)
     screen.addUIObject(textbox)
-
-
 
 
 
@@ -698,8 +715,12 @@ def display_speech(*text):
 venda_pos = (background.center()[0], background.size()[1]*0.98)
 barraca = Barraca('shop.png', venda_pos)
 vendedor = Vendedor('assets/luks')
+size = 192
+mic_icon = Icon(screen.width()-40-size, screen.heigth()-20-size, size, size, 'assets/voice_icon.png')
+mic_icon.setVisible(False)
 
 screen.addObject(background, vendedor, barraca) 
+screen.addUIObject(mic_icon)
 
 screen.setBackground(background)
 screen.screenSetup()
@@ -759,7 +780,10 @@ try:
                     else:
                         AUDIO_PRESSING = True if not AUDIO_PRESSING else False
                         if not AUDIO_PRESSING:
+                            mic_icon.setVisible(False)
                             print("not", end=" ")
+                        else:
+                            mic_icon.setVisible(True)
                         print("Listening!")
 
         roteiro.update()

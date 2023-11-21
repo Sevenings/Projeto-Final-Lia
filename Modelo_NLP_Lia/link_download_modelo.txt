@@ -1,4 +1,12 @@
+
+Modelo 1.1:
 https://drive.google.com/file/d/11HvRWpTwyWbXd6t8Bzyb1oNN2Gu9eL5t/view
+
+Modelo 1.1.1:
+https://drive.google.com/file/d/1-U9YvlMBd1wAT4wHp4pIz6Sdx3ZaOywK/view?usp=drive_link
+
+Modelo 3:
+https://drive.google.com/file/d/1-Ija_ZJD8VBBzJx2bPvekR9LJj5d-mdb/view?usp=drive_link
 
 Antes de rodar o programa altere o nome do modelo de 
 
@@ -7,3 +15,4 @@ colab_complete_model_vs1.0
 para 
 
 colab_complete_model_vs1_0.pth
+

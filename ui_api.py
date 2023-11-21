@@ -67,7 +67,8 @@ class Screen:
         # Toda a pipeline está encapsulada aqui
         self.preCanvas.fill('black')
         for obj in self.cena:
-            obj.draw()
+            if obj.isVisible(): 
+                obj.draw()
         self.drawDisplay()
         self.drawUI()
 
@@ -86,7 +87,8 @@ class Screen:
 
     def drawUI(self):
         for obj in self.ui:
-            obj.draw(self.display)
+            if obj.isVisible():
+                obj.draw(self.display)
 
     def setBackground(self, background):
         # Set Background
@@ -144,6 +146,16 @@ class GameObject(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = self.pos
         self.screen = None
+        self.visible = True
+
+    def setVisible(self, v):
+        self.visible = v
+
+    def isVisible(self):
+        return self.visible
+
+    def toggleVisible(self):
+        self.visible = True if not self.visible else False
 
     def loadImagesSetup(self, image_name):
         images_path = PATH_ASSETS
@@ -209,11 +221,60 @@ class Background(GameObject):
 
 
 
+class UIObject:
+    def __init__(self, x_pos, y_pos, width, height):
+        # Screen
+        self.screen = None
+        self.visible = True
+
+        # Posições e dimensões
+        self.rect = Rect(x_pos, y_pos, width, height)
+
+    def setVisible(self, v):
+        self.visible = v
+
+    def isVisible(self):
+        return self.visible
+
+    def toggleVisible(self):
+        self.visible = True if not self.visible else False
+
+    def setScreen(self, screen):
+        self.screen = screen
+
+    def draw(self, screen):
+        pass
+
+    def screenSetup(self):
+        pass
+
+    def update(self, time):
+        pass
+
+    def interact(self):
+        return False
+
+
+class Icon(UIObject):
+    def __init__(self, x_pos, y_pos, width, height, icon_path):
+        self.image = pygame.image.load(icon_path)
+        origin_width = self.image.get_width()
+        origin_height = self.image.get_height()
+        self.image = pygame.transform.scale(self.image, (width, height))
+        super().__init__(x_pos, y_pos, width, height)
+
+    def draw(self, screen):
+        screen.blit(self.image, (self.rect.x, self.rect.y))
+
+
+TEXTBOX_TAG_DIALOGO = 'CAIXA_DE_DIALOGO'
+
 # Classe de elementos da barra de texto
 class TextBox:
     def __init__(self, x_pos, y_pos, width, height, rgba, tag=None, icon=None):
         # Screen
         self.screen = None
+        self.visible = True
 
         # Posições e dimensões
         self.rect = Rect(x_pos, y_pos, width, height)
@@ -236,6 +297,15 @@ class TextBox:
 
         # Tag com a função que a TextBox possui na interface ( DIALOGO, 
         self.tag = tag
+
+    def setVisible(self, v):
+        self.visible = v
+
+    def isVisible(self):
+        return self.visible
+
+    def toggleVisible(self):
+        self.visible = True if not self.visible else False
 
     def addText(self, *textList):
         for text in textList:
@@ -298,7 +368,8 @@ class TextBox:
 
     def setScreen(self, screen):
         self.screen = screen
-        self.screen.hasDialog = True
+        if self.tag == TEXTBOX_TAG_DIALOGO:
+            self.screen.hasDialog = True
 
     def screenSetup(self):
         pass
@@ -312,9 +383,11 @@ class TextBox:
             self.textBuffer.pop(0)
         else:
             self.kill()
+        return True
 
     def kill(self):
-        self.screen.hasDialog = False
+        if self.tag == TEXTBOX_TAG_DIALOGO:
+            self.screen.hasDialog = False
         self.screen.ui.remove(self)
 
         
